@@ -1,0 +1,71 @@
+ Name: D.L WRIGHT POS
+
+Mobile App in react native expo.
+
+
+- First thing you log into is the POS
+- Make a login with varied passwords logins for Cashier, Manager, etc.
+- Make It shift based - You cant navigate the POS if you dont "clock in".
+  Wont allow you to sign out unless you clock out.
+- Ability to add cash to the regsiter
+- clicking close shift pops up a modal showing expected cash amount and actual cash amount and the difference. 
+- In the pos, add functionally to type the quantity and increment
+- Low stock notification.
+- Discounts and Refund feature.
+
+Back office:
+- Each item has a custom category (categories can be created and deleted)
+- Low stock notification.
+- Employee salary
+- back office with analytics dashboard. down to the years quarters and years (Net sales gross profit, etc) not too much info, keep neat. must have:
+
+Sales summary
+Sales by item
+Top selling product
+Sales by category
+Sales by employee
+Sales by payment type
+Receipts
+Sales by modifier
+Discounts
+Taxes
+Shifts
+bar, pie chart etc.
+
+- Item list (tells the markup for each item)
+- In the items list each item should have an item photo with an indicator icon showing the amount in stock.
+- employee list
+- access rights (Pos and back office). There are sub rights in pos:
+
+Accept payments
+Apply discounts with restricted access
+Change taxes in a sale (make a specific item have a specific tax, GCT etc)
+Manage all open tickets
+Void saved items in open tickets
+can Open cash drawer without making a sale to add money
+can apply items costs and the markup.
+View all receipts
+Perform refunds
+etc
+
+IMPORTANT: Certain people cannot access back office.
+time cards and total hours worked.
+
+Additional Features: 
+Theme customizability discord style UI.
+In settings: Time Clock (Tracks cash that goes in and out of a drawer)
+             Shifts (Tracks cash that goes in and out of drawer)
+             Customer Displays (Display order information at time of purchase, toggleable)
+Taxes: add taxes to certain items
+Stores (Add store and number of stores)
+
+Functionality:
+Offline and online app (Can work without wifi, find some means to backup and store data in cloud when needed)
+
+
+
+minor details:
+every numerical value the represents money must have a dollar/yen/pound sign.
+good search bar. 
+
+Ensure that each button works. Every button MUST serve a purpose. No ambiguous labels.

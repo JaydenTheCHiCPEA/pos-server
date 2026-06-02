@@ -1,0 +1,2 @@
+- [DL Wright POS architecture](dl-wright-pos.md) — offline-first Expo mobile POS; all data in AsyncStorage; Discord dark theme; role-based auth with 4 demo users.
+- [Nested component in render causes crash](nested-component-crash.md) — defining a React component function inside another component's body causes "Invalid hook call" on re-renders; always extract to module level.
