@@ -14,9 +14,15 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": false
+      "supportsTablet": false,
+      "bundleIdentifier": "pos",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
-    "android": {},
+    "android": {
+      "package": "com.jayden_hindss.dlwrightpos"
+    },
     "web": {
       "favicon": "./assets/images/icon.png"
     },
@@ -24,7 +30,7 @@
       [
         "expo-router",
         {
-          "origin": "https://replit.com/"
+          "origin": "https://dl-wright-pos.vercel.app"
         }
       ],
       "expo-font",
@@ -33,6 +39,11 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "c8234295-c36e-4a75-ac2d-3eed2a949a3f"
+      }
     }
   }
 }

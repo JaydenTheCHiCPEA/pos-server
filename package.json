@@ -6,7 +6,9 @@
     "preinstall": "echo skipping",
     "build": "pnpm run typecheck && pnpm -r --if-present run build",
     "typecheck:libs": "tsc --build",
-    "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck"
+    "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck",
+    "android": "expo run:android",
+    "ios": "expo run:ios"
   },
   "private": true,
   "devDependencies": {
@@ -14,5 +16,16 @@
     "@types/react": "~19.2.10",
     "prettier": "^3.8.3",
     "typescript": "~5.9.3"
+  },
+  "packageManager": "pnpm@11.4.0",
+  "dependencies": {
+    "expo": "~54.0.34",
+    "expo-dev-client": "~55.0.35",
+    "expo-splash-screen": "~31.0.13",
+    "expo-status-bar": "~3.0.9",
+    "react-dom": "catalog:",
+    "react-native": "0.81.5",
+    "react-native-web": "^0.21.2",
+    "react": "19.1.0"
   }
 }
