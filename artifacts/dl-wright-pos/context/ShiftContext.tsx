@@ -1,6 +1,7 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { loadData, saveData } from "@/utils/storage";
 import { generateId } from "@/utils/format";
+import { useSync } from "@/context/SyncContext";
 import type { Shift, CashMovement, Transaction } from "@/types";
 
 interface ShiftContextValue {
@@ -17,16 +18,22 @@ interface ShiftContextValue {
 export const ShiftContext = createContext<ShiftContextValue | null>(null);
 
 export function ShiftProvider({ children }: { children: React.ReactNode }) {
+  const { registerReload } = useSync();
   const [currentShift, setCurrentShift] = useState<Shift | null>(null);
   const [allShifts, setAllShifts] = useState<Shift[]>([]);
 
-  useEffect(() => {
-    loadData<Shift[]>("shifts", []).then((shifts) => {
-      setAllShifts(shifts);
-      const open = shifts.find((s) => s.status === "open");
-      if (open) setCurrentShift(open);
-    });
+  const reloadFromStorage = useCallback(async () => {
+    const shifts = await loadData<Shift[]>("shifts", []);
+    setAllShifts(shifts);
+    const open = shifts.find((s) => s.status === "open");
+    setCurrentShift(open ?? null);
   }, []);
+
+  useEffect(() => {
+    void reloadFromStorage();
+  }, [reloadFromStorage]);
+
+  useEffect(() => registerReload(reloadFromStorage), [registerReload, reloadFromStorage]);
 
   function save(shifts: Shift[]) {
     setAllShifts(shifts);

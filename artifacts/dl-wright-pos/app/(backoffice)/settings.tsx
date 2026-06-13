@@ -8,11 +8,12 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAuth } from "@/context/AuthContext";
 import { useStore } from "@/context/StoreContext";
+import { useSync } from "@/context/SyncContext";
 import { useTheme } from "@/context/ThemeContext";
 import { useColors } from "@/hooks/useColors";
 import type { Category, DiscountRule, TaxRate } from "@/types";
 
-type Section = "store" | "categories" | "taxes" | "discounts" | "access" | "appearance";
+type Section = "store" | "categories" | "taxes" | "discounts" | "access" | "appearance" | "sync";
 type Confirm = { msg: string; onOk: () => void } | null;
 
 const PRESET_COLORS = ["#5865F2","#ED4245","#3BA55D","#FAA61A","#EB459E","#1ABC9C","#E67E22","#9B59B6","#3498DB","#2ECC71"];
@@ -23,6 +24,7 @@ export default function SettingsScreen() {
   const { users, updateUser } = useAuth();
   const { store, categories, taxRates, discountRules, updateStore, addCategory, updateCategory, deleteCategory, addTaxRate, updateTaxRate, deleteTaxRate, addDiscountRule, updateDiscountRule, deleteDiscountRule } = useStore();
   const { theme, setThemeOption, currencySymbol, setCurrencySymbol } = useTheme();
+  const { logs, isOnline, isSyncing, lastSyncAt, pendingSync, serverUrl, syncNow, clearLogs } = useSync();
 
   const [activeSection, setActiveSection] = useState<Section>("store");
   const [toast, setToast] = useState<string | null>(null);
@@ -106,6 +108,7 @@ export default function SettingsScreen() {
     { key: "categories", label: "Categories", icon: "tag" },
     { key: "taxes", label: "Taxes", icon: "percent" },
     { key: "discounts", label: "Discounts", icon: "gift" },
+    { key: "sync", label: "Sync & Logs", icon: "cloud" },
     { key: "access", label: "Access Rights", icon: "shield" },
   ];
 
@@ -274,6 +277,92 @@ export default function SettingsScreen() {
     );
   }
 
+  function renderSync() {
+    const statusColor = isSyncing ? colors.warning : isOnline ? colors.success : colors.destructive;
+    const statusLabel = isSyncing ? "Syncing…" : isOnline ? "Online" : "Offline";
+
+    return (
+      <ScrollView contentContainerStyle={st.section}>
+        <Text style={[st.sectionTitle, { color: colors.foreground }]}>Cloud Sync</Text>
+
+        <View style={[st.row, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View style={{ flex: 1, gap: 4 }}>
+            <Text style={[st.rowLabel, { color: colors.foreground }]}>Server</Text>
+            <Text style={{ color: colors.mutedForeground, fontSize: 12 }} numberOfLines={2}>
+              {serverUrl || "Not configured — set EXPO_PUBLIC_DOMAIN"}
+            </Text>
+          </View>
+          <View style={[st.statusDot, { backgroundColor: statusColor }]} />
+        </View>
+
+        <View style={[st.syncCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View style={st.syncRow}>
+            <Text style={[st.syncLabel, { color: colors.mutedForeground }]}>Status</Text>
+            <Text style={[st.syncVal, { color: statusColor }]}>{statusLabel}</Text>
+          </View>
+          <View style={st.syncRow}>
+            <Text style={[st.syncLabel, { color: colors.mutedForeground }]}>Last sync</Text>
+            <Text style={[st.syncVal, { color: colors.foreground }]}>
+              {lastSyncAt ? new Date(lastSyncAt).toLocaleString() : "Never"}
+            </Text>
+          </View>
+          <View style={st.syncRow}>
+            <Text style={[st.syncLabel, { color: colors.mutedForeground }]}>Pending changes</Text>
+            <Text style={[st.syncVal, { color: pendingSync ? colors.warning : colors.success }]}>
+              {pendingSync ? "Yes — will sync when online" : "None"}
+            </Text>
+          </View>
+        </View>
+
+        <TouchableOpacity
+          style={[st.saveBtn, { backgroundColor: isSyncing ? colors.muted : colors.primary }]}
+          onPress={async () => {
+            const ok = await syncNow();
+            showToast(ok ? "Sync complete." : "Sync failed — check logs below.");
+          }}
+          disabled={isSyncing}
+        >
+          <Text style={st.saveBtnText}>{isSyncing ? "Syncing…" : "Sync Now"}</Text>
+        </TouchableOpacity>
+
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 24 }}>
+          <Text style={[st.sectionTitle, { color: colors.foreground, marginBottom: 0 }]}>Request Logs</Text>
+          <TouchableOpacity onPress={() => { void clearLogs(); showToast("Logs cleared."); }}>
+            <Text style={{ color: colors.destructive, fontWeight: "700", fontSize: 13 }}>Clear</Text>
+          </TouchableOpacity>
+        </View>
+
+        {logs.length === 0 ? (
+          <Text style={{ color: colors.mutedForeground, fontSize: 13, marginTop: 8 }}>No logs yet.</Text>
+        ) : (
+          logs.map((entry) => {
+            const levelColor =
+              entry.level === "error" ? colors.destructive
+              : entry.level === "warn" ? colors.warning
+              : entry.level === "success" ? colors.success
+              : colors.mutedForeground;
+            return (
+              <View key={entry.id} style={[st.logRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <View style={[st.logDot, { backgroundColor: levelColor }]} />
+                  <Text style={{ color: colors.foreground, fontSize: 13, fontWeight: "600", flex: 1 }}>{entry.message}</Text>
+                </View>
+                {entry.detail ? (
+                  <Text style={{ color: colors.mutedForeground, fontSize: 11, marginTop: 4, marginLeft: 16 }} numberOfLines={3}>
+                    {entry.detail}
+                  </Text>
+                ) : null}
+                <Text style={{ color: colors.mutedForeground, fontSize: 10, marginTop: 4, marginLeft: 16 }}>
+                  {new Date(entry.timestamp).toLocaleString()}
+                </Text>
+              </View>
+            );
+          })
+        )}
+      </ScrollView>
+    );
+  }
+
   function renderAccessRights() {
     return (
       <ScrollView contentContainerStyle={st.section}>
@@ -309,6 +398,7 @@ export default function SettingsScreen() {
     categories: renderCategories(),
     taxes: renderTaxes(),
     discounts: renderDiscounts(),
+    sync: renderSync(),
     access: renderAccessRights(),
   };
 
@@ -493,4 +583,11 @@ const st = StyleSheet.create({
   confirmBox: { borderRadius: 16, borderWidth: 1, padding: 24, width: "100%", maxWidth: 340, gap: 4 },
   confirmMsg: { fontSize: 16, fontWeight: "600" },
   confirmBtn: { flex: 1, height: 44, borderRadius: 10, alignItems: "center", justifyContent: "center" },
+  statusDot: { width: 12, height: 12, borderRadius: 6 },
+  syncCard: { borderRadius: 12, borderWidth: 1, padding: 14, gap: 10 },
+  syncRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  syncLabel: { fontSize: 13 },
+  syncVal: { fontSize: 13, fontWeight: "600" },
+  logRow: { borderRadius: 10, borderWidth: 1, padding: 12, marginTop: 8 },
+  logDot: { width: 8, height: 8, borderRadius: 4 },
 });

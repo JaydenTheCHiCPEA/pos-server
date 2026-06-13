@@ -82,9 +82,7 @@ function prepareDirectories(timestamp) {
   }
 
   const dirs = [
-    path.join(staticBuild, timestamp, "_expo", "static", "js", "ios"),
     path.join(staticBuild, timestamp, "_expo", "static", "js", "android"),
-    path.join(staticBuild, "ios"),
     path.join(staticBuild, "android"),
   ];
 
@@ -136,6 +134,7 @@ async function startMetro(expoPublicDomain, expoPublicReplId) {
 
   console.log("Starting Metro...");
   console.log(`Setting EXPO_PUBLIC_DOMAIN=${expoPublicDomain}`);
+  console.log(`API server for sync: https://${expoPublicDomain}/api/storage`);
   const env = {
     ...process.env,
     EXPO_PUBLIC_DOMAIN: expoPublicDomain,
@@ -146,8 +145,9 @@ async function startMetro(expoPublicDomain, expoPublicReplId) {
     console.log(`Setting EXPO_PUBLIC_REPL_ID=${expoPublicReplId}`);
   }
 
+  const isWindows = process.platform === "win32";
   metroProcess = spawn(
-    "pnpm",
+    isWindows ? "pnpm.cmd" : "pnpm",
     [
       "exec",
       "expo",
@@ -159,6 +159,7 @@ async function startMetro(expoPublicDomain, expoPublicReplId) {
     {
       stdio: ["ignore", "pipe", "pipe"],
       detached: false,
+      shell: true,
       cwd: projectRoot,
       env,
     },
@@ -287,18 +288,12 @@ async function downloadBundlesAndManifests(timestamp) {
   console.log("This may take several minutes for production builds...");
 
   try {
-    // Bundles are sequential — Metro can't handle both platforms simultaneously
-    // without stalling. Manifests are cheap and run in parallel after.
-    await downloadBundle("ios", timestamp);
     await downloadBundle("android", timestamp);
 
-    const [iosManifest, androidManifest] = await Promise.all([
-      downloadManifest("ios"),
-      downloadManifest("android"),
-    ]);
+    const androidManifest = await downloadManifest("android");
 
     console.log("All downloads completed successfully");
-    return { ios: iosManifest, android: androidManifest };
+    return { android: androidManifest };
   } catch (error) {
     exitWithError(`Download failed: ${error.message}`);
   }
@@ -307,10 +302,6 @@ async function downloadBundlesAndManifests(timestamp) {
 function extractAssets(timestamp) {
   const staticBuild = path.join(projectRoot, "static-build");
   const bundles = {
-    ios: fs.readFileSync(
-      path.join(staticBuild, timestamp, "_expo", "static", "js", "ios", "bundle.js"),
-      "utf-8",
-    ),
     android: fs.readFileSync(
       path.join(staticBuild, timestamp, "_expo", "static", "js", "android", "bundle.js"),
       "utf-8",
@@ -352,7 +343,6 @@ function extractAssets(timestamp) {
     }
   };
 
-  extractFromBundle(bundles.ios, "ios");
   extractFromBundle(bundles.android, "android");
 
   return Array.from(assetsMap.values());
@@ -458,7 +448,6 @@ function updateBundleUrls(timestamp, baseUrl) {
     fs.writeFileSync(bundlePath, bundle);
   };
 
-  updateForPlatform("ios");
   updateForPlatform("android");
   console.log("Updated bundle URLs");
 }
@@ -500,7 +489,6 @@ function updateManifests(manifests, timestamp, baseUrl, assetsByHash) {
     );
   };
 
-  updateForPlatform("ios", manifests.ios);
   updateForPlatform("android", manifests.android);
   console.log("Manifests updated");
 }
@@ -557,6 +545,8 @@ async function main() {
   updateManifests(manifests, timestamp, baseUrl, assetsByHash);
 
   console.log("Build complete! Deploy to:", baseUrl);
+  console.log("Sync endpoint:", `${baseUrl}/api/storage`);
+  console.log("Health check:", `${baseUrl}/api/healthz`);
 
   if (metroProcess) {
     metroProcess.kill();

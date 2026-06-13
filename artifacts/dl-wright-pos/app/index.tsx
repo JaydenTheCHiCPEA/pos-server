@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAuth } from "@/context/AuthContext";
 import { useShift } from "@/context/ShiftContext";
+import { useSync } from "@/context/SyncContext";
 import { useColors } from "@/hooks/useColors";
 
 export default function LoginScreen() {
@@ -16,6 +17,7 @@ export default function LoginScreen() {
   const insets = useSafeAreaInsets();
   const { login, currentUser } = useAuth();
   const { isClocked } = useShift();
+  const { syncNow, isSyncing, isOnline, pendingSync } = useSync();
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -51,6 +53,7 @@ export default function LoginScreen() {
     }
     setError(null);
     setLoading(true);
+    await syncNow();
     const ok = await login(username.trim(), password.trim());
     setLoading(false);
     if (!ok) {
@@ -118,6 +121,11 @@ export default function LoginScreen() {
               </View>
               <Text style={s.appName}>D.L. WRIGHT POS</Text>
               <Text style={s.appSub}>Point of Sale System</Text>
+              {!isOnline || pendingSync ? (
+                <Text style={[s.appSub, { marginTop: 8, color: pendingSync ? colors.warning : colors.mutedForeground }]}>
+                  {isSyncing ? "Syncing data…" : pendingSync ? "Offline — saved locally" : ""}
+                </Text>
+              ) : null}
             </View>
 
             <Text style={s.label}>Username</Text>

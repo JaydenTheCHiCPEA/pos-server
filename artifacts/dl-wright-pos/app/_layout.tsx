@@ -16,6 +16,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ThemeProvider } from "@/context/ThemeContext";
+import { SyncProvider } from "@/context/SyncContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { ShiftProvider } from "@/context/ShiftContext";
 import { StoreProvider } from "@/context/StoreContext";
@@ -57,17 +58,19 @@ export default function RootLayout() {
       <ErrorBoundary>
         <QueryClientProvider client={queryClient}>
           <ThemeProvider>
-            <AuthProvider>
-              <StoreProvider>
-                <ShiftProvider>
-                  <GestureHandlerRootView style={{ flex: 1 }}>
-                    <KeyboardProvider>
-                      <RootLayoutNav />
-                    </KeyboardProvider>
-                  </GestureHandlerRootView>
-                </ShiftProvider>
-              </StoreProvider>
-            </AuthProvider>
+            <SyncProvider>
+              <AuthProvider>
+                <StoreProvider>
+                  <ShiftProvider>
+                    <GestureHandlerRootView style={{ flex: 1 }}>
+                      <KeyboardProvider>
+                        <RootLayoutNav />
+                      </KeyboardProvider>
+                    </GestureHandlerRootView>
+                  </ShiftProvider>
+                </StoreProvider>
+              </AuthProvider>
+            </SyncProvider>
           </ThemeProvider>
         </QueryClientProvider>
       </ErrorBoundary>

@@ -11,6 +11,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "@/context/AuthContext";
 import { useShift } from "@/context/ShiftContext";
 import { useStore } from "@/context/StoreContext";
+import { useSync } from "@/context/SyncContext";
 import { useTheme } from "@/context/ThemeContext";
 import { useColors } from "@/hooks/useColors";
 import type { CartItem, Item } from "@/types";
@@ -27,6 +28,7 @@ export default function POSScreen() {
   const { currentShift, clockOut, addCashMovement, recordSale, getExpectedCash } = useShift();
   const { items, categories, taxRates, transactions, discountRules, store, addTransaction, reduceStock, getLowStockItems, getDefaultTax } = useStore();
   const { currencySymbol } = useTheme();
+  const { isOnline, pendingSync, isSyncing } = useSync();
 
   const isWide = Platform.OS === "web" && width >= 820;
   const topPad = Platform.OS === "web" ? 67 : insets.top;
@@ -238,12 +240,10 @@ export default function POSScreen() {
           ) : (
             <View style={[iCS.colorBar, { backgroundColor: catColor }]} />
           )}
-          {/* Stock badge (iOS-style app icon badge) */}
-          {isLow ? (
-            <View style={[iCS.stockBadge, { backgroundColor: colors.destructive }]}>
-              <Text style={iCS.stockBadgeTxt}>{"!"}</Text>
-            </View>
-          ) : null}
+          {/* Stock count badge */}
+          <View style={[iCS.stockBadge, { backgroundColor: isLow ? colors.destructive : colors.primary }]}>
+            <Text style={iCS.stockBadgeTxt}>{item.stock}</Text>
+          </View>
           {/* In-cart qty badge */}
           {inCartItem ? (
             <View style={[iCS.cartBadge, { backgroundColor: colors.primary }]}>
@@ -380,6 +380,9 @@ export default function POSScreen() {
           </Text>
         </View>
         <View style={s.headerRight}>
+          <View style={[s.syncIndicator, { backgroundColor: (isSyncing ? colors.warning : isOnline && !pendingSync ? colors.success : colors.destructive) + "22", borderColor: (isSyncing ? colors.warning : isOnline && !pendingSync ? colors.success : colors.destructive) + "44" }]}>
+            <Feather name="cloud" size={13} color={isSyncing ? colors.warning : isOnline && !pendingSync ? colors.success : colors.destructive} />
+          </View>
           {hasPermission("openCashDrawer") ? (
             <TouchableOpacity style={[s.hBtn, { backgroundColor: colors.surface, borderColor: colors.border }]} onPress={() => setAddCashVisible(true)}>
               <Feather name="dollar-sign" size={15} color={colors.mutedForeground} />
@@ -807,7 +810,7 @@ const iCS = StyleSheet.create({
   body: { flex: 1, padding: 8, gap: 3 },
   name: { fontSize: 12, fontWeight: "600", lineHeight: 15 },
   price: { fontSize: 13, fontWeight: "700" },
-  stockBadge: { position: "absolute", top: -4, right: -4, minWidth: 20, height: 20, borderRadius: 10, alignItems: "center", justifyContent: "center", paddingHorizontal: 4, borderWidth: 2, borderColor: "#fff" },
+  stockBadge: { position: "absolute", top: -4, right: -4, minWidth: 22, height: 22, borderRadius: 11, alignItems: "center", justifyContent: "center", paddingHorizontal: 5, borderWidth: 2, borderColor: "#fff" },
   stockBadgeTxt: { color: "#fff", fontSize: 10, fontWeight: "800" },
   cartBadge: { position: "absolute", top: -4, left: -4, minWidth: 20, height: 20, borderRadius: 10, alignItems: "center", justifyContent: "center", paddingHorizontal: 4, borderWidth: 2, borderColor: "#fff" },
   cartBadgeTxt: { color: "#fff", fontSize: 10, fontWeight: "800" },
@@ -851,6 +854,7 @@ const s = StyleSheet.create({
   storeName: { fontSize: 16, fontWeight: "700" },
   userLine: { fontSize: 11, marginTop: 2 },
   hBtn: { width: 32, height: 32, borderRadius: 8, borderWidth: 1, alignItems: "center", justifyContent: "center" },
+  syncIndicator: { width: 32, height: 32, borderRadius: 8, borderWidth: 1, alignItems: "center", justifyContent: "center" },
   closeBtn: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, paddingVertical: 7, borderRadius: 8, borderWidth: 1 },
   closeBtnTxt: { fontSize: 12, fontWeight: "700" },
   lowBar: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 14, paddingVertical: 7, borderBottomWidth: 1 },

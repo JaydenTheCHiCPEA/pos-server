@@ -1,7 +1,8 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { loadData, saveData } from "@/utils/storage";
+import { loadData, saveData, SYNC_STORAGE_KEYS } from "@/utils/storage";
 import { generateId } from "@/utils/format";
+import { useSync } from "@/context/SyncContext";
 import type { Item, Category, TaxRate, Transaction, DiscountRule, Store } from "@/types";
 
 const DEFAULT_CATEGORIES: Category[] = [
@@ -48,7 +49,7 @@ const DEFAULT_STORE: Store = {
   receiptFooter: "Thank you for your business!",
 };
 
-const ALL_STORAGE_KEYS = ["items", "categories", "tax_rates", "transactions", "discount_rules", "store", "shifts"];
+const ALL_STORAGE_KEYS = SYNC_STORAGE_KEYS.filter((k) => k !== "users" && k !== "theme_option" && k !== "currency_symbol");
 
 interface StoreContextValue {
   items: Item[];
@@ -80,6 +81,7 @@ interface StoreContextValue {
 export const StoreContext = createContext<StoreContextValue | null>(null);
 
 export function StoreProvider({ children }: { children: React.ReactNode }) {
+  const { registerReload } = useSync();
   const [items, setItems] = useState<Item[]>(DEFAULT_ITEMS);
   const [categories, setCategories] = useState<Category[]>(DEFAULT_CATEGORIES);
   const [taxRates, setTaxRates] = useState<TaxRate[]>(DEFAULT_TAX_RATES);
@@ -87,14 +89,29 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [discountRules, setDiscountRules] = useState<DiscountRule[]>(DEFAULT_DISCOUNT_RULES);
   const [store, setStore] = useState<Store>(DEFAULT_STORE);
 
-  useEffect(() => {
-    loadData<Item[]>("items", DEFAULT_ITEMS).then(setItems);
-    loadData<Category[]>("categories", DEFAULT_CATEGORIES).then(setCategories);
-    loadData<TaxRate[]>("tax_rates", DEFAULT_TAX_RATES).then(setTaxRates);
-    loadData<Transaction[]>("transactions", []).then(setTransactions);
-    loadData<DiscountRule[]>("discount_rules", DEFAULT_DISCOUNT_RULES).then(setDiscountRules);
-    loadData<Store>("store", DEFAULT_STORE).then(setStore);
+  const reloadFromStorage = useCallback(async () => {
+    const [loadedItems, loadedCategories, loadedTaxRates, loadedTransactions, loadedDiscountRules, loadedStore] =
+      await Promise.all([
+        loadData<Item[]>("items", DEFAULT_ITEMS),
+        loadData<Category[]>("categories", DEFAULT_CATEGORIES),
+        loadData<TaxRate[]>("tax_rates", DEFAULT_TAX_RATES),
+        loadData<Transaction[]>("transactions", []),
+        loadData<DiscountRule[]>("discount_rules", DEFAULT_DISCOUNT_RULES),
+        loadData<Store>("store", DEFAULT_STORE),
+      ]);
+    setItems(loadedItems);
+    setCategories(loadedCategories);
+    setTaxRates(loadedTaxRates);
+    setTransactions(loadedTransactions);
+    setDiscountRules(loadedDiscountRules);
+    setStore(loadedStore);
   }, []);
+
+  useEffect(() => {
+    void reloadFromStorage();
+  }, [reloadFromStorage]);
+
+  useEffect(() => registerReload(reloadFromStorage), [registerReload, reloadFromStorage]);
 
   function addItem(i: Omit<Item, "id">) {
     const n = { ...i, id: generateId() };

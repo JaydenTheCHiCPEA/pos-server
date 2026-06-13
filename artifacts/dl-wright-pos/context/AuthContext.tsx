@@ -1,6 +1,7 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { loadData, saveData } from "@/utils/storage";
 import { generateId } from "@/utils/format";
+import { useSync } from "@/context/SyncContext";
 import type { User, UserRole, Permissions } from "@/types";
 
 const ADMIN_PERMISSIONS: Permissions = {
@@ -52,12 +53,24 @@ interface AuthContextValue {
 export const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const { registerReload } = useSync();
   const [users, setUsers] = useState<User[]>(DEFAULT_USERS);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
-  useEffect(() => {
-    loadData<User[]>("users", DEFAULT_USERS).then(setUsers);
+  const reloadFromStorage = useCallback(async () => {
+    const loaded = await loadData<User[]>("users", DEFAULT_USERS);
+    setUsers(loaded);
+    setCurrentUser((prev) => {
+      if (!prev) return prev;
+      return loaded.find((u) => u.id === prev.id) ?? prev;
+    });
   }, []);
+
+  useEffect(() => {
+    void reloadFromStorage();
+  }, [reloadFromStorage]);
+
+  useEffect(() => registerReload(reloadFromStorage), [registerReload, reloadFromStorage]);
 
   async function login(username: string, password: string): Promise<boolean> {
     const freshUsers = await loadData<User[]>("users", users);
