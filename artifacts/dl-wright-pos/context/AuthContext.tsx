@@ -1,6 +1,8 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { loadData, saveData } from "@/utils/storage";
 import { generateId } from "@/utils/format";
+import { serverLogin, serverRegister, clearServerAuth } from "@/utils/api";
+import { checkServerHealth, getServerUrl } from "@/utils/storage";
 import { useSync } from "@/context/SyncContext";
 import type { User, UserRole, Permissions } from "@/types";
 
@@ -43,6 +45,7 @@ interface AuthContextValue {
   currentUser: User | null;
   users: User[];
   login: (username: string, password: string) => Promise<boolean>;
+  register: (name: string, username: string, password: string) => Promise<{ ok: boolean; error?: string }>;
   logout: () => void;
   addUser: (u: Omit<User, "id">) => void;
   updateUser: (id: string, u: Partial<User>) => void;
@@ -74,18 +77,78 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   async function login(username: string, password: string): Promise<boolean> {
     const freshUsers = await loadData<User[]>("users", users);
-    const user = freshUsers.find(
-      u => u.username.toLowerCase() === username.toLowerCase() && u.password === password && u.active
+    const localUser = freshUsers.find(
+      (u) => u.username.toLowerCase() === username.toLowerCase() && u.password === password && u.active,
     );
-    if (user) {
-      setCurrentUser(user);
+
+    // Try server login when online — validates against Neon and stores auth token
+    const serverUrl = getServerUrl();
+    if (serverUrl && await checkServerHealth(serverUrl)) {
+      const result = await serverLogin(username, password);
+      if (result.ok && result.user) {
+        // Merge server user into local list (keep password for offline re-login)
+        const serverUser = { ...result.user, password } as User;
+        const merged = freshUsers.some((u) => u.id === serverUser.id)
+          ? freshUsers.map((u) => (u.id === serverUser.id ? { ...u, ...serverUser, password } : u))
+          : [...freshUsers, serverUser];
+        setUsers(merged);
+        saveData("users", merged);
+        setCurrentUser(serverUser);
+        return true;
+      }
+    }
+
+    // Offline or server unavailable — local credential check
+    if (localUser) {
+      setCurrentUser(localUser);
       return true;
     }
     return false;
   }
 
+  async function register(name: string, username: string, password: string): Promise<{ ok: boolean; error?: string }> {
+    const freshUsers = await loadData<User[]>("users", users);
+
+    if (freshUsers.some((u) => u.username.toLowerCase() === username.toLowerCase())) {
+      return { ok: false, error: "Username already exists" };
+    }
+
+    if (password.length < 6) {
+      return { ok: false, error: "Password must be at least 6 characters" };
+    }
+
+    const newUser: User = {
+      id: generateId(),
+      username: username.toLowerCase(),
+      password,
+      name,
+      role: "admin",
+      salary: 0,
+      hourlyRate: 0,
+      permissions: { ...ADMIN_PERMISSIONS },
+      active: true,
+    };
+
+    const updated = [...freshUsers, newUser];
+    setUsers(updated);
+    await saveData("users", updated);
+
+    // Register on server when online
+    const serverUrl = getServerUrl();
+    if (serverUrl && await checkServerHealth(serverUrl)) {
+      const result = await serverRegister(name, username, password);
+      if (!result.ok) {
+        console.log("[Auth] Server register failed — saved locally, will sync later", result.error);
+      }
+    }
+
+    setCurrentUser(newUser);
+    return { ok: true };
+  }
+
   function logout() {
     setCurrentUser(null);
+    void clearServerAuth();
   }
 
   function addUser(u: Omit<User, "id">) {
@@ -96,14 +159,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   function updateUser(id: string, u: Partial<User>) {
-    const updated = users.map(usr => usr.id === id ? { ...usr, ...u } : usr);
+    const updated = users.map((usr) => (usr.id === id ? { ...usr, ...u } : usr));
     setUsers(updated);
     saveData("users", updated);
-    if (currentUser?.id === id) setCurrentUser(prev => prev ? { ...prev, ...u } : prev);
+    if (currentUser?.id === id) setCurrentUser((prev) => (prev ? { ...prev, ...u } : prev));
   }
 
   function deleteUser(id: string) {
-    const updated = users.filter(u => u.id !== id);
+    const updated = users.filter((u) => u.id !== id);
     setUsers(updated);
     saveData("users", updated);
   }
@@ -113,7 +176,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ currentUser, users, login, logout, addUser, updateUser, deleteUser, hasPermission }}>
+    <AuthContext.Provider value={{ currentUser, users, login, register, logout, addUser, updateUser, deleteUser, hasPermission }}>
       {children}
     </AuthContext.Provider>
   );

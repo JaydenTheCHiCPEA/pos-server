@@ -12,20 +12,23 @@ import { useShift } from "@/context/ShiftContext";
 import { useSync } from "@/context/SyncContext";
 import { useColors } from "@/hooks/useColors";
 
+type Mode = "login" | "register";
+
 export default function LoginScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { login, currentUser } = useAuth();
+  const { login, register, currentUser } = useAuth();
   const { isClocked } = useShift();
   const { syncNow, isSyncing, isOnline, pendingSync } = useSync();
 
+  const [mode, setMode] = useState<Mode>("login");
+  const [name, setName] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  /* ── entrance animation ── */
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(28)).current;
 
@@ -46,25 +49,52 @@ export default function LoginScreen() {
     }
   }, [currentUser, isClocked]);
 
-  async function handleLogin() {
+  async function handleSubmit() {
     if (!username.trim() || !password.trim()) {
       setError("Please enter your username and password.");
       return;
     }
+    if (mode === "register" && !name.trim()) {
+      setError("Please enter your name.");
+      return;
+    }
+
     setError(null);
     setLoading(true);
     await syncNow();
-    const ok = await login(username.trim(), password.trim());
-    setLoading(false);
-    if (!ok) {
-      setError("Invalid username or password.");
-      Animated.sequence([
-        Animated.timing(slideAnim, { toValue: -6, duration: 60, useNativeDriver: true }),
-        Animated.timing(slideAnim, { toValue: 6, duration: 60, useNativeDriver: true }),
-        Animated.timing(slideAnim, { toValue: -4, duration: 60, useNativeDriver: true }),
-        Animated.timing(slideAnim, { toValue: 0, duration: 60, useNativeDriver: true }),
-      ]).start();
+
+    if (mode === "register") {
+      const result = await register(name.trim(), username.trim(), password.trim());
+      setLoading(false);
+      if (!result.ok) {
+        setError(result.error ?? "Registration failed.");
+        shakeForm();
+      }
+    } else {
+      const ok = await login(username.trim(), password.trim());
+      setLoading(false);
+      if (!ok) {
+        setError("Invalid username or password.");
+        shakeForm();
+      }
     }
+  }
+
+  function shakeForm() {
+    Animated.sequence([
+      Animated.timing(slideAnim, { toValue: -6, duration: 60, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: 6, duration: 60, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: -4, duration: 60, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: 0, duration: 60, useNativeDriver: true }),
+    ]).start();
+  }
+
+  function switchMode(next: Mode) {
+    setMode(next);
+    setError(null);
+    setName("");
+    setUsername("");
+    setPassword("");
   }
 
   const s = StyleSheet.create({
@@ -88,13 +118,18 @@ export default function LoginScreen() {
     },
     appName: { fontSize: 26, fontWeight: "800", color: colors.foreground, letterSpacing: 1 },
     appSub: { fontSize: 13, color: colors.mutedForeground, marginTop: 4, letterSpacing: 0.5 },
+    modeRow: { flexDirection: "row", gap: 8, marginBottom: 8 },
+    modeBtn: {
+      flex: 1, paddingVertical: 10, borderRadius: 10, alignItems: "center",
+      borderWidth: 1.5,
+    },
+    modeBtnText: { fontWeight: "700", fontSize: 14 },
     label: { fontSize: 12, fontWeight: "600", color: colors.mutedForeground, marginBottom: 6, marginTop: 16, letterSpacing: 0.8, textTransform: "uppercase" },
     inputRow: {
       flexDirection: "row", alignItems: "center",
       backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.border,
       borderRadius: 12, paddingHorizontal: 14,
     },
-    inputRowFocus: { borderColor: colors.primary },
     input: { flex: 1, height: 50, color: colors.foreground, fontSize: 15, paddingLeft: 10 },
     loginBtn: {
       marginTop: 28, backgroundColor: colors.primary, borderRadius: 12,
@@ -108,6 +143,7 @@ export default function LoginScreen() {
       borderWidth: 1, borderColor: colors.destructive + "44",
     },
     errorText: { color: colors.destructive, fontSize: 13, fontWeight: "600", flex: 1 },
+    hint: { marginTop: 16, fontSize: 12, color: colors.mutedForeground, textAlign: "center" },
   });
 
   return (
@@ -128,13 +164,45 @@ export default function LoginScreen() {
               ) : null}
             </View>
 
+            <View style={s.modeRow}>
+              <TouchableOpacity
+                style={[s.modeBtn, { borderColor: mode === "login" ? colors.primary : colors.border, backgroundColor: mode === "login" ? colors.primary + "18" : colors.surface }]}
+                onPress={() => switchMode("login")}
+              >
+                <Text style={[s.modeBtnText, { color: mode === "login" ? colors.primary : colors.foreground }]}>Sign In</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[s.modeBtn, { borderColor: mode === "register" ? colors.primary : colors.border, backgroundColor: mode === "register" ? colors.primary + "18" : colors.surface }]}
+                onPress={() => switchMode("register")}
+              >
+                <Text style={[s.modeBtnText, { color: mode === "register" ? colors.primary : colors.foreground }]}>Create Account</Text>
+              </TouchableOpacity>
+            </View>
+
+            {mode === "register" ? (
+              <>
+                <Text style={s.label}>Your Name</Text>
+                <View style={s.inputRow}>
+                  <Feather name="user" size={18} color={colors.mutedForeground} />
+                  <TextInput
+                    style={s.input}
+                    value={name}
+                    onChangeText={(v) => { setName(v); setError(null); }}
+                    placeholder="Store owner name"
+                    placeholderTextColor={colors.mutedForeground}
+                    autoCapitalize="words"
+                  />
+                </View>
+              </>
+            ) : null}
+
             <Text style={s.label}>Username</Text>
             <View style={s.inputRow}>
-              <Feather name="user" size={18} color={colors.mutedForeground} />
+              <Feather name="at-sign" size={18} color={colors.mutedForeground} />
               <TextInput
                 style={s.input}
                 value={username}
-                onChangeText={v => { setUsername(v); setError(null); }}
+                onChangeText={(v) => { setUsername(v); setError(null); }}
                 placeholder="Enter username"
                 placeholderTextColor={colors.mutedForeground}
                 autoCapitalize="none"
@@ -149,12 +217,12 @@ export default function LoginScreen() {
               <TextInput
                 style={s.input}
                 value={password}
-                onChangeText={v => { setPassword(v); setError(null); }}
+                onChangeText={(v) => { setPassword(v); setError(null); }}
                 placeholder="Enter password"
                 placeholderTextColor={colors.mutedForeground}
                 secureTextEntry={!showPw}
                 returnKeyType="done"
-                onSubmitEditing={handleLogin}
+                onSubmitEditing={handleSubmit}
               />
               <TouchableOpacity onPress={() => setShowPw(!showPw)} activeOpacity={0.7} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
                 <Feather name={showPw ? "eye-off" : "eye"} size={18} color={colors.mutedForeground} />
@@ -168,13 +236,19 @@ export default function LoginScreen() {
               </View>
             ) : null}
 
-            <TouchableOpacity style={s.loginBtn} onPress={handleLogin} activeOpacity={0.85} disabled={loading}>
+            <TouchableOpacity style={s.loginBtn} onPress={handleSubmit} activeOpacity={0.85} disabled={loading}>
               {loading ? (
                 <Feather name="loader" size={20} color="#fff" />
               ) : (
-                <Text style={s.loginBtnText}>Sign In</Text>
+                <Text style={s.loginBtnText}>{mode === "register" ? "Create Admin Account" : "Sign In"}</Text>
               )}
             </TouchableOpacity>
+
+            {mode === "login" ? (
+              <Text style={s.hint}>Demo: admin / admin123 · manager / manager123 · cashier1 / cashier123</Text>
+            ) : (
+              <Text style={s.hint}>New accounts are admins. You can add cashiers from Back Office → Team.</Text>
+            )}
           </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>

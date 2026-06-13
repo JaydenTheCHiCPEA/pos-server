@@ -13,29 +13,13 @@ export const SYNC_STORAGE_KEYS = [
   "currency_symbol",
 ];
 
-export type SyncLogLevel = "info" | "success" | "warn" | "error";
-
-export interface SyncLogEntry {
-  id: string;
-  timestamp: string;
-  level: SyncLogLevel;
-  message: string;
-  detail?: string;
-}
-
-const LOGS_KEY = "sync_logs";
 const PENDING_SYNC_KEY = "sync_pending";
-const MAX_LOGS = 150;
+const AUTH_TOKEN_KEY = "auth_token";
 
 let syncTrigger: (() => void) | null = null;
-let logListener: ((entry: SyncLogEntry) => void) | null = null;
 
 export function registerSyncTrigger(fn: () => void) {
   syncTrigger = fn;
-}
-
-export function registerLogListener(fn: (entry: SyncLogEntry) => void) {
-  logListener = fn;
 }
 
 export function getServerUrl(): string {
@@ -44,30 +28,8 @@ export function getServerUrl(): string {
   return domain.replace(/\/$/, "");
 }
 
-function makeLogId() {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-}
-
-export async function addSyncLog(
-  level: SyncLogLevel,
-  message: string,
-  detail?: string,
-): Promise<void> {
-  const entry: SyncLogEntry = {
-    id: makeLogId(),
-    timestamp: new Date().toISOString(),
-    level,
-    message,
-    detail,
-  };
-  logListener?.(entry);
-  try {
-    const existing = await loadData<SyncLogEntry[]>(LOGS_KEY, []);
-    const next = [entry, ...existing].slice(0, MAX_LOGS);
-    await AsyncStorage.setItem(LOGS_KEY, JSON.stringify(next));
-  } catch {
-    // ignore log persistence errors
-  }
+/** Dev-only sync logging — visible in Metro / Expo logs, not in the app UI. */
+export function devLog(level: string, message: string, detail?: string): void {
   const prefix = `[Sync ${level.toUpperCase()}]`;
   if (detail) {
     console.log(prefix, message, detail);
@@ -76,12 +38,24 @@ export async function addSyncLog(
   }
 }
 
-export async function loadSyncLogs(): Promise<SyncLogEntry[]> {
-  return loadData<SyncLogEntry[]>(LOGS_KEY, []);
+export async function getAuthToken(): Promise<string | null> {
+  try {
+    return await AsyncStorage.getItem(AUTH_TOKEN_KEY);
+  } catch {
+    return null;
+  }
 }
 
-export async function clearSyncLogs(): Promise<void> {
-  await AsyncStorage.removeItem(LOGS_KEY);
+export async function setAuthToken(token: string | null): Promise<void> {
+  try {
+    if (token) {
+      await AsyncStorage.setItem(AUTH_TOKEN_KEY, token);
+    } else {
+      await AsyncStorage.removeItem(AUTH_TOKEN_KEY);
+    }
+  } catch {
+    // ignore
+  }
 }
 
 export async function isSyncPending(): Promise<boolean> {
@@ -165,6 +139,13 @@ function mergeStorageValue(current: unknown, incoming: unknown): unknown {
   return incoming ?? current;
 }
 
+async function authHeaders(): Promise<Record<string, string>> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  const token = await getAuthToken();
+  if (token) headers.Authorization = `Bearer ${token}`;
+  return headers;
+}
+
 export async function syncAllToServer(
   url: string,
   keys: string[],
@@ -186,25 +167,25 @@ export async function syncAllToServer(
     }
 
     const endpoint = `${base}/api/storage/sync`;
-    await addSyncLog("info", `POST ${endpoint}`, `Pushing ${keys.length} keys`);
+    devLog("info", `POST ${endpoint}`, `Pushing ${keys.length} keys`);
 
     const res = await fetch(endpoint, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: await authHeaders(),
       body: JSON.stringify({ storage }),
     });
 
     const txt = await res.text();
     if (!res.ok) {
-      await addSyncLog("error", `Push failed (${res.status})`, txt.slice(0, 300));
+      devLog("error", `Push failed (${res.status})`, txt.slice(0, 300));
       return { ok: false, error: `server error: ${res.status} ${txt}` };
     }
 
-    await addSyncLog("success", "Pushed local data to server");
+    devLog("success", "Pushed local data to server");
     return { ok: true };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    await addSyncLog("error", "Push failed", msg);
+    devLog("error", "Push failed", msg);
     return { ok: false, error: msg };
   }
 }
@@ -220,11 +201,11 @@ export async function fetchAllFromServer(
 
   try {
     const endpoint = `${base}/api/storage`;
-    await addSyncLog("info", `GET ${endpoint}`);
+    devLog("info", `GET ${endpoint}`);
 
-    const res = await fetch(endpoint);
+    const res = await fetch(endpoint, { headers: await authHeaders() });
     if (!res.ok) {
-      await addSyncLog("error", `Pull failed (${res.status})`);
+      devLog("error", `Pull failed (${res.status})`);
       return { ok: false, error: `server error ${res.status}` };
     }
 
@@ -270,11 +251,11 @@ export async function fetchAllFromServer(
       }
     }
 
-    await addSyncLog("success", "Pulled server data", `Merged ${mergedCount} keys`);
+    devLog("success", "Pulled server data", `Merged ${mergedCount} keys`);
     return { ok: true };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    await addSyncLog("error", "Pull failed", msg);
+    devLog("error", "Pull failed", msg);
     return { ok: false, error: msg };
   }
 }
@@ -283,7 +264,7 @@ export async function syncBothDirections(
   url: string,
   keys: string[],
 ): Promise<{ ok: boolean; error?: string }> {
-  await addSyncLog("info", "Starting sync", url || "(no url)");
+  devLog("info", "Starting sync", url || "(no url)");
 
   const pull = await fetchAllFromServer(url, keys);
   if (!pull.ok) return pull;
@@ -295,7 +276,7 @@ export async function syncBothDirections(
   if (!pullAgain.ok) return pullAgain;
 
   await setSyncPending(false);
-  await addSyncLog("success", "Sync complete");
+  devLog("success", "Sync complete");
   return { ok: true };
 }
 

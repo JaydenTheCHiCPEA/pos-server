@@ -9,28 +9,22 @@ import React, {
 import { AppState, type AppStateStatus } from "react-native";
 
 import {
-  addSyncLog,
   checkServerHealth,
-  clearSyncLogs,
+  devLog,
   getServerUrl,
   isSyncPending,
-  loadSyncLogs,
-  registerLogListener,
   registerSyncTrigger,
   syncBothDirections,
   SYNC_STORAGE_KEYS,
-  type SyncLogEntry,
 } from "@/utils/storage";
 
 interface SyncContextValue {
-  logs: SyncLogEntry[];
   isOnline: boolean;
   isSyncing: boolean;
   lastSyncAt: string | null;
   pendingSync: boolean;
   serverUrl: string;
   syncNow: () => Promise<boolean>;
-  clearLogs: () => Promise<void>;
   registerReload: (fn: () => Promise<void>) => () => void;
 }
 
@@ -40,7 +34,6 @@ const SYNC_DEBOUNCE_MS = 2500;
 const RETRY_INTERVAL_MS = 45000;
 
 export function SyncProvider({ children }: { children: React.ReactNode }) {
-  const [logs, setLogs] = useState<SyncLogEntry[]>([]);
   const [isOnline, setIsOnline] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncAt, setLastSyncAt] = useState<string | null>(null);
@@ -70,7 +63,7 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
   const runSync = useCallback(async (): Promise<boolean> => {
     if (syncingRef.current) return false;
     if (!serverUrl) {
-      await addSyncLog("warn", "Sync skipped — EXPO_PUBLIC_DOMAIN not set");
+      devLog("warn", "Sync skipped — EXPO_PUBLIC_DOMAIN not set");
       return false;
     }
 
@@ -82,7 +75,7 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
       setIsOnline(online);
 
       if (!online) {
-        await addSyncLog("warn", "Offline — changes saved locally, will sync when online");
+        devLog("warn", "Offline — changes saved locally, will sync when online");
         setPendingSync(true);
         return false;
       }
@@ -111,18 +104,14 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     registerSyncTrigger(scheduleSync);
-    registerLogListener((entry) => {
-      setLogs((prev) => [entry, ...prev].slice(0, 150));
-    });
 
-    void loadSyncLogs().then(setLogs);
     void refreshPending();
 
     if (serverUrl) {
-      void addSyncLog("info", "App started", `Server: ${serverUrl}`);
+      devLog("info", "App started", `Server: ${serverUrl}`);
       void runSync();
     } else {
-      void addSyncLog("warn", "No server URL configured — set EXPO_PUBLIC_DOMAIN");
+      devLog("warn", "No server URL configured — set EXPO_PUBLIC_DOMAIN");
     }
 
     const interval = setInterval(() => {
@@ -140,7 +129,6 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       registerSyncTrigger(() => {});
-      registerLogListener(() => {});
       if (syncTimer.current) clearTimeout(syncTimer.current);
       clearInterval(interval);
       sub.remove();
@@ -153,22 +141,15 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
     return ok;
   }, [runSync, refreshPending]);
 
-  const clearLogs = useCallback(async () => {
-    await clearSyncLogs();
-    setLogs([]);
-  }, []);
-
   return (
     <SyncContext.Provider
       value={{
-        logs,
         isOnline,
         isSyncing,
         lastSyncAt,
         pendingSync,
         serverUrl,
         syncNow,
-        clearLogs,
         registerReload,
       }}
     >
