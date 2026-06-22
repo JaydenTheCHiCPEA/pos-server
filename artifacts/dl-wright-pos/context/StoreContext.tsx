@@ -1,18 +1,4 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
-<<<<<<< HEAD
-import { loadData, saveData } from "@/utils/storage";
-import { generateId } from "@/utils/format";
-import { useSync } from "@/context/SyncContext";
-import {
-  EMPTY_CATEGORIES,
-  EMPTY_DISCOUNT_RULES,
-  EMPTY_ITEMS,
-  EMPTY_STORE,
-  EMPTY_TAX_RATES,
-} from "@/utils/empty-data";
-import type { Item, Category, TaxRate, Transaction, DiscountRule, Store } from "@/types";
-
-=======
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { loadData, saveData, SYNC_STORAGE_KEYS } from "@/utils/storage";
 import { generateId } from "@/utils/format";
@@ -65,7 +51,6 @@ const DEFAULT_STORE: Store = {
 
 const ALL_STORAGE_KEYS = SYNC_STORAGE_KEYS.filter((k) => k !== "users" && k !== "theme_option" && k !== "currency_symbol");
 
->>>>>>> 044d5891246a55b19f65c682d0836a79ef42346e
 interface StoreContextValue {
   items: Item[];
   categories: Category[];
@@ -97,40 +82,22 @@ export const StoreContext = createContext<StoreContextValue | null>(null);
 
 export function StoreProvider({ children }: { children: React.ReactNode }) {
   const { registerReload } = useSync();
-<<<<<<< HEAD
-  const [items, setItems] = useState<Item[]>(EMPTY_ITEMS);
-  const [categories, setCategories] = useState<Category[]>(EMPTY_CATEGORIES);
-  const [taxRates, setTaxRates] = useState<TaxRate[]>(EMPTY_TAX_RATES);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [discountRules, setDiscountRules] = useState<DiscountRule[]>(EMPTY_DISCOUNT_RULES);
-  const [store, setStore] = useState<Store>(EMPTY_STORE);
-=======
   const [items, setItems] = useState<Item[]>(DEFAULT_ITEMS);
   const [categories, setCategories] = useState<Category[]>(DEFAULT_CATEGORIES);
   const [taxRates, setTaxRates] = useState<TaxRate[]>(DEFAULT_TAX_RATES);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [discountRules, setDiscountRules] = useState<DiscountRule[]>(DEFAULT_DISCOUNT_RULES);
   const [store, setStore] = useState<Store>(DEFAULT_STORE);
->>>>>>> 044d5891246a55b19f65c682d0836a79ef42346e
 
   const reloadFromStorage = useCallback(async () => {
     const [loadedItems, loadedCategories, loadedTaxRates, loadedTransactions, loadedDiscountRules, loadedStore] =
       await Promise.all([
-<<<<<<< HEAD
-        loadData<Item[]>("items", EMPTY_ITEMS),
-        loadData<Category[]>("categories", EMPTY_CATEGORIES),
-        loadData<TaxRate[]>("tax_rates", EMPTY_TAX_RATES),
-        loadData<Transaction[]>("transactions", []),
-        loadData<DiscountRule[]>("discount_rules", EMPTY_DISCOUNT_RULES),
-        loadData<Store>("store", EMPTY_STORE),
-=======
         loadData<Item[]>("items", DEFAULT_ITEMS),
         loadData<Category[]>("categories", DEFAULT_CATEGORIES),
         loadData<TaxRate[]>("tax_rates", DEFAULT_TAX_RATES),
         loadData<Transaction[]>("transactions", []),
         loadData<DiscountRule[]>("discount_rules", DEFAULT_DISCOUNT_RULES),
         loadData<Store>("store", DEFAULT_STORE),
->>>>>>> 044d5891246a55b19f65c682d0836a79ef42346e
       ]);
     setItems(loadedItems);
     setCategories(loadedCategories);
@@ -205,14 +172,6 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function wipeAllData(): Promise<void> {
-<<<<<<< HEAD
-    setItems(EMPTY_ITEMS);
-    setCategories(EMPTY_CATEGORIES);
-    setTaxRates(EMPTY_TAX_RATES);
-    setTransactions([]);
-    setDiscountRules(EMPTY_DISCOUNT_RULES);
-    setStore(EMPTY_STORE);
-=======
     try {
       await AsyncStorage.multiRemove(ALL_STORAGE_KEYS);
     } catch {}
@@ -222,7 +181,6 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setTransactions([]);
     setDiscountRules(DEFAULT_DISCOUNT_RULES);
     setStore(DEFAULT_STORE);
->>>>>>> 044d5891246a55b19f65c682d0836a79ef42346e
   }
 
   return (

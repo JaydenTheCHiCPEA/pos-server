@@ -4,10 +4,7 @@ import { generateId } from "@/utils/format";
 import { serverLogin, serverRegister, clearServerAuth } from "@/utils/api";
 import { checkServerHealth, getServerUrl } from "@/utils/storage";
 import { useSync } from "@/context/SyncContext";
-<<<<<<< HEAD
 import { EMPTY_USERS, saveEmptyBusinessData } from "@/utils/empty-data";
-=======
->>>>>>> 044d5891246a55b19f65c682d0836a79ef42346e
 import type { User, UserRole, Permissions } from "@/types";
 
 const ADMIN_PERMISSIONS: Permissions = {
@@ -32,16 +29,6 @@ const CASHIER_PERMISSIONS: Permissions = {
   viewReports: false, manageSettings: false,
 };
 
-<<<<<<< HEAD
-=======
-export const DEFAULT_USERS: User[] = [
-  { id: "u1", username: "admin", password: "admin123", name: "Admin User", role: "admin", salary: 0, hourlyRate: 0, permissions: ADMIN_PERMISSIONS, active: true },
-  { id: "u2", username: "manager", password: "manager123", name: "Sarah Johnson", role: "manager", salary: 4500, hourlyRate: 25, permissions: MANAGER_PERMISSIONS, active: true },
-  { id: "u3", username: "cashier1", password: "cashier123", name: "John Smith", role: "cashier", salary: 2500, hourlyRate: 12, permissions: CASHIER_PERMISSIONS, active: true },
-  { id: "u4", username: "cashier2", password: "cash456", name: "Lisa Davis", role: "cashier", salary: 2500, hourlyRate: 12, permissions: CASHIER_PERMISSIONS, active: true },
-];
-
->>>>>>> 044d5891246a55b19f65c682d0836a79ef42346e
 export function getDefaultPermissions(role: UserRole): Permissions {
   if (role === "admin") return { ...ADMIN_PERMISSIONS };
   if (role === "manager") return { ...MANAGER_PERMISSIONS };
@@ -58,29 +45,18 @@ interface AuthContextValue {
   updateUser: (id: string, u: Partial<User>) => void;
   deleteUser: (id: string) => void;
   hasPermission: (p: keyof Permissions) => boolean;
-<<<<<<< HEAD
   wipeAllData: () => Promise<void>;
-=======
->>>>>>> 044d5891246a55b19f65c682d0836a79ef42346e
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { registerReload } = useSync();
-<<<<<<< HEAD
   const [users, setUsers] = useState<User[]>(EMPTY_USERS);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   const reloadFromStorage = useCallback(async () => {
     const loaded = await loadData<User[]>("users", EMPTY_USERS);
-=======
-  const [users, setUsers] = useState<User[]>(DEFAULT_USERS);
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-
-  const reloadFromStorage = useCallback(async () => {
-    const loaded = await loadData<User[]>("users", DEFAULT_USERS);
->>>>>>> 044d5891246a55b19f65c682d0836a79ef42346e
     setUsers(loaded);
     setCurrentUser((prev) => {
       if (!prev) return prev;
@@ -95,27 +71,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => registerReload(reloadFromStorage), [registerReload, reloadFromStorage]);
 
   async function login(username: string, password: string): Promise<boolean> {
-<<<<<<< HEAD
     const freshUsers = await loadData<User[]>("users", EMPTY_USERS);
-=======
-    const freshUsers = await loadData<User[]>("users", users);
->>>>>>> 044d5891246a55b19f65c682d0836a79ef42346e
     const localUser = freshUsers.find(
       (u) => u.username.toLowerCase() === username.toLowerCase() && u.password === password && u.active,
     );
 
-<<<<<<< HEAD
-=======
-    // Try server login when online — validates against Neon and stores auth token
->>>>>>> 044d5891246a55b19f65c682d0836a79ef42346e
     const serverUrl = getServerUrl();
     if (serverUrl && await checkServerHealth(serverUrl)) {
       const result = await serverLogin(username, password);
       if (result.ok && result.user) {
-<<<<<<< HEAD
-=======
-        // Merge server user into local list (keep password for offline re-login)
->>>>>>> 044d5891246a55b19f65c682d0836a79ef42346e
         const serverUser = { ...result.user, password } as User;
         const merged = freshUsers.some((u) => u.id === serverUser.id)
           ? freshUsers.map((u) => (u.id === serverUser.id ? { ...u, ...serverUser, password } : u))
@@ -127,10 +91,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-<<<<<<< HEAD
-=======
-    // Offline or server unavailable — local credential check
->>>>>>> 044d5891246a55b19f65c682d0836a79ef42346e
     if (localUser) {
       setCurrentUser(localUser);
       return true;
@@ -139,15 +99,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function register(name: string, username: string, password: string): Promise<{ ok: boolean; error?: string }> {
-<<<<<<< HEAD
     const freshUsers = await loadData<User[]>("users", EMPTY_USERS);
 
     if (freshUsers.length > 0) {
       return { ok: false, error: "A business account already exists. Sign in instead." };
     }
-=======
-    const freshUsers = await loadData<User[]>("users", users);
->>>>>>> 044d5891246a55b19f65c682d0836a79ef42346e
 
     if (freshUsers.some((u) => u.username.toLowerCase() === username.toLowerCase())) {
       return { ok: false, error: "Username already exists" };
@@ -169,31 +125,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       active: true,
     };
 
-<<<<<<< HEAD
     const updated = [newUser];
     setUsers(updated);
     await saveData("users", updated);
     await saveEmptyBusinessData(saveData);
 
-=======
-    const updated = [...freshUsers, newUser];
-    setUsers(updated);
-    await saveData("users", updated);
-
-    // Register on server when online
->>>>>>> 044d5891246a55b19f65c682d0836a79ef42346e
     const serverUrl = getServerUrl();
     if (serverUrl && await checkServerHealth(serverUrl)) {
       const result = await serverRegister(name, username, password);
       if (!result.ok) {
-<<<<<<< HEAD
         setUsers(EMPTY_USERS);
         await saveData("users", EMPTY_USERS);
         await saveEmptyBusinessData(saveData);
         return { ok: false, error: result.error ?? "Server registration failed" };
-=======
-        console.log("[Auth] Server register failed — saved locally, will sync later", result.error);
->>>>>>> 044d5891246a55b19f65c682d0836a79ef42346e
       }
     }
 
@@ -207,10 +151,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   function addUser(u: Omit<User, "id">) {
-<<<<<<< HEAD
     if (u.role === "admin") return;
-=======
->>>>>>> 044d5891246a55b19f65c682d0836a79ef42346e
     const newUser = { ...u, id: generateId() };
     const updated = [...users, newUser];
     setUsers(updated);
@@ -234,7 +175,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return currentUser?.permissions[p] === true;
   }
 
-<<<<<<< HEAD
   async function wipeAllData(): Promise<void> {
     setUsers(EMPTY_USERS);
     setCurrentUser(null);
@@ -242,10 +182,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider value={{ currentUser, users, login, register, logout, addUser, updateUser, deleteUser, hasPermission, wipeAllData }}>
-=======
-  return (
-    <AuthContext.Provider value={{ currentUser, users, login, register, logout, addUser, updateUser, deleteUser, hasPermission }}>
->>>>>>> 044d5891246a55b19f65c682d0836a79ef42346e
       {children}
     </AuthContext.Provider>
   );

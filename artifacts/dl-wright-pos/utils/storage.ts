@@ -97,7 +97,6 @@ export async function clearData(key: string): Promise<void> {
   } catch {}
 }
 
-<<<<<<< HEAD
 /** Clear all synced keys plus auth and pending sync flags. */
 export async function clearAllLocalStorage(): Promise<void> {
   try {
@@ -105,48 +104,6 @@ export async function clearAllLocalStorage(): Promise<void> {
   } catch {
     // ignore
   }
-=======
-/** Merge arrays of objects that have an `id` field — incoming values win on conflict. */
-export function mergeArraysById<T extends { id?: string }>(
-  base: T[],
-  incoming: T[],
-): T[] {
-  const map = new Map<string, T>();
-  for (const item of base) {
-    if (item && typeof item === "object" && item.id != null) {
-      map.set(String(item.id), item);
-    }
-  }
-  for (const item of incoming) {
-    if (item && typeof item === "object" && item.id != null) {
-      map.set(String(item.id), item);
-    }
-  }
-  return Array.from(map.values());
-}
-
-function mergeStorageValue(current: unknown, incoming: unknown): unknown {
-  if (Array.isArray(current) && Array.isArray(incoming)) {
-    return mergeArraysById(current as { id?: string }[], incoming as { id?: string }[]);
-  }
-
-  if (Array.isArray(incoming) && !current) {
-    return incoming;
-  }
-
-  if (
-    incoming &&
-    typeof incoming === "object" &&
-    !Array.isArray(incoming) &&
-    current &&
-    typeof current === "object" &&
-    !Array.isArray(current)
-  ) {
-    return { ...(current as object), ...(incoming as object) };
-  }
-
-  return incoming ?? current;
->>>>>>> 044d5891246a55b19f65c682d0836a79ef42346e
 }
 
 async function authHeaders(): Promise<Record<string, string>> {
@@ -221,7 +178,6 @@ export async function fetchAllFromServer(
 
     const data = await res.json();
     const storage = data?.storage ?? {};
-<<<<<<< HEAD
     let replacedCount = 0;
 
     for (const key of keys) {
@@ -230,53 +186,12 @@ export async function fetchAllFromServer(
       try {
         await AsyncStorage.setItem(key, JSON.stringify(storage[key]));
         replacedCount++;
-=======
-    let mergedCount = 0;
-
-    for (const key of keys) {
-      const serverVal = storage[key];
-      if (serverVal == null) continue;
-
-      try {
-        const localRaw = await AsyncStorage.getItem(key);
-        const localVal = localRaw === null ? null : JSON.parse(localRaw);
-
-        if (Array.isArray(localVal) && Array.isArray(serverVal)) {
-          const merged = mergeArraysById(
-            serverVal as { id?: string }[],
-            localVal as { id?: string }[],
-          );
-          await AsyncStorage.setItem(key, JSON.stringify(merged));
-          mergedCount++;
-        } else if (Array.isArray(serverVal) && localVal == null) {
-          await AsyncStorage.setItem(key, JSON.stringify(serverVal));
-          mergedCount++;
-        } else if (
-          serverVal &&
-          typeof serverVal === "object" &&
-          !Array.isArray(serverVal) &&
-          localVal &&
-          typeof localVal === "object" &&
-          !Array.isArray(localVal)
-        ) {
-          const merged = { ...(serverVal as object), ...(localVal as object) };
-          await AsyncStorage.setItem(key, JSON.stringify(merged));
-          mergedCount++;
-        } else if (localVal == null) {
-          await AsyncStorage.setItem(key, JSON.stringify(serverVal));
-          mergedCount++;
-        }
->>>>>>> 044d5891246a55b19f65c682d0836a79ef42346e
       } catch {
         // ignore per-key errors
       }
     }
 
-<<<<<<< HEAD
     devLog("success", "Pulled server data", `Replaced ${replacedCount} keys`);
-=======
-    devLog("success", "Pulled server data", `Merged ${mergedCount} keys`);
->>>>>>> 044d5891246a55b19f65c682d0836a79ef42346e
     return { ok: true };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
@@ -291,29 +206,17 @@ export async function syncBothDirections(
 ): Promise<{ ok: boolean; error?: string }> {
   devLog("info", "Starting sync", url || "(no url)");
 
-<<<<<<< HEAD
   const push = await syncAllToServer(url, keys);
   if (!push.ok) return push;
 
   const pull = await fetchAllFromServer(url, keys);
   if (!pull.ok) return pull;
-=======
-  const pull = await fetchAllFromServer(url, keys);
-  if (!pull.ok) return pull;
-
-  const push = await syncAllToServer(url, keys);
-  if (!push.ok) return push;
-
-  const pullAgain = await fetchAllFromServer(url, keys);
-  if (!pullAgain.ok) return pullAgain;
->>>>>>> 044d5891246a55b19f65c682d0836a79ef42346e
 
   await setSyncPending(false);
   devLog("success", "Sync complete");
   return { ok: true };
 }
 
-<<<<<<< HEAD
 export async function wipeServerStorage(
   url: string,
 ): Promise<{ ok: boolean; error?: string }> {
@@ -346,8 +249,6 @@ export async function wipeServerStorage(
   }
 }
 
-=======
->>>>>>> 044d5891246a55b19f65c682d0836a79ef42346e
 export async function checkServerHealth(url: string): Promise<boolean> {
   const base = url.replace(/\/$/, "");
   if (!base) return false;

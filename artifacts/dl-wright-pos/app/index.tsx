@@ -61,19 +61,10 @@ export default function LoginScreen() {
 
     setError(null);
     setLoading(true);
-<<<<<<< HEAD
-
-    if (mode === "register") {
-      const result = await register(name.trim(), username.trim(), password.trim());
-      if (result.ok) {
-        await syncNow();
-      }
-=======
     await syncNow();
 
     if (mode === "register") {
       const result = await register(name.trim(), username.trim(), password.trim());
->>>>>>> 044d5891246a55b19f65c682d0836a79ef42346e
       setLoading(false);
       if (!result.ok) {
         setError(result.error ?? "Registration failed.");
@@ -81,12 +72,6 @@ export default function LoginScreen() {
       }
     } else {
       const ok = await login(username.trim(), password.trim());
-<<<<<<< HEAD
-      if (ok) {
-        await syncNow();
-      }
-=======
->>>>>>> 044d5891246a55b19f65c682d0836a79ef42346e
       setLoading(false);
       if (!ok) {
         setError("Invalid username or password.");
@@ -259,17 +244,9 @@ export default function LoginScreen() {
               )}
             </TouchableOpacity>
 
-<<<<<<< HEAD
             {mode === "register" ? (
               <Text style={s.hint}>New accounts are admins. You can add cashiers from Back Office → Team.</Text>
             ) : null}
-=======
-            {mode === "login" ? (
-              <Text style={s.hint}>Demo: admin / admin123 · manager / manager123 · cashier1 / cashier123</Text>
-            ) : (
-              <Text style={s.hint}>New accounts are admins. You can add cashiers from Back Office → Team.</Text>
-            )}
->>>>>>> 044d5891246a55b19f65c682d0836a79ef42346e
           </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
