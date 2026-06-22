@@ -1,0 +1,8 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "BsSGFSaCSe-4sh7pqT5aj"
+uri = "file://artifacts/dl-wright-pos/assets/images/icon.png"
+type = "image"
+title = "generated_image"
