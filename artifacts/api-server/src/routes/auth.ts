@@ -7,7 +7,12 @@ import { eq } from "drizzle-orm";
 import { db, storageTable } from "../../../../lib/db/src";
 import { logger } from "../lib/logger";
 import { createSession } from "../lib/sessions";
+<<<<<<< HEAD
 import { EMPTY_SEED_PAYLOAD } from "../lib/empty-data";
+=======
+import { DEMO_USERS } from "../lib/demo-data";
+import { mergeArraysById } from "../lib/merge";
+>>>>>>> 044d5891246a55b19f65c682d0836a79ef42346e
 import { requireAuth, type AuthedRequest } from "../middleware/auth";
 
 const router = Router();
@@ -42,12 +47,15 @@ const ADMIN_PERMISSIONS: Record<string, boolean> = {
   manageSettings: true,
 };
 
+<<<<<<< HEAD
 const MANAGER_PERMISSIONS: Record<string, boolean> = {
   ...ADMIN_PERMISSIONS,
   manageEmployees: false,
   manageSettings: false,
 };
 
+=======
+>>>>>>> 044d5891246a55b19f65c682d0836a79ef42346e
 const CASHIER_PERMISSIONS: Record<string, boolean> = {
   acceptPayments: true,
   applyDiscounts: true,
@@ -83,6 +91,7 @@ async function saveUsers(users: StoredUser[]): Promise<void> {
     });
 }
 
+<<<<<<< HEAD
 async function writeFreshBusiness(newUser: StoredUser): Promise<void> {
   await db.delete(storageTable);
 
@@ -98,6 +107,8 @@ async function writeFreshBusiness(newUser: StoredUser): Promise<void> {
   }
 }
 
+=======
+>>>>>>> 044d5891246a55b19f65c682d0836a79ef42346e
 function sanitizeUser(u: StoredUser) {
   const { password: _pw, ...rest } = u;
   return rest;
@@ -117,7 +128,15 @@ router.post("/auth/login", async (req, res) => {
   }
 
   try {
+<<<<<<< HEAD
     const users = await loadUsers();
+=======
+    let users = await loadUsers();
+    if (users.length === 0) {
+      users = DEMO_USERS as StoredUser[];
+      await saveUsers(users);
+    }
+>>>>>>> 044d5891246a55b19f65c682d0836a79ef42346e
 
     const user = users.find(
       (u) =>
@@ -140,7 +159,11 @@ router.post("/auth/login", async (req, res) => {
   }
 });
 
+<<<<<<< HEAD
 // POST /api/auth/register — create the sole admin account for a new business
+=======
+// POST /api/auth/register — create a new admin account (store owner signup)
+>>>>>>> 044d5891246a55b19f65c682d0836a79ef42346e
 router.post("/auth/register", async (req, res) => {
   const username = String(req.body?.username ?? "").trim().toLowerCase();
   const password = String(req.body?.password ?? "");
@@ -157,8 +180,13 @@ router.post("/auth/register", async (req, res) => {
   try {
     const users = await loadUsers();
 
+<<<<<<< HEAD
     if (users.length > 0) {
       return res.status(409).json({ error: "A business account already exists. Sign in or contact your admin." });
+=======
+    if (users.some((u) => u.username.toLowerCase() === username)) {
+      return res.status(409).json({ error: "Username already exists" });
+>>>>>>> 044d5891246a55b19f65c682d0836a79ef42346e
     }
 
     const newUser: StoredUser = {
@@ -173,7 +201,12 @@ router.post("/auth/register", async (req, res) => {
       active: true,
     };
 
+<<<<<<< HEAD
     await writeFreshBusiness(newUser);
+=======
+    const updated = [...users, newUser];
+    await saveUsers(updated);
+>>>>>>> 044d5891246a55b19f65c682d0836a79ef42346e
 
     const token = createSession(newUser.id);
     logger.info({ userId: newUser.id, username }, "New admin account registered");
@@ -196,10 +229,13 @@ router.post("/auth/users", requireAuth, async (req, res) => {
     return res.status(400).json({ error: "name, username, and password required" });
   }
 
+<<<<<<< HEAD
   if (role === "admin") {
     return res.status(403).json({ error: "Additional admin accounts cannot be created" });
   }
 
+=======
+>>>>>>> 044d5891246a55b19f65c682d0836a79ef42346e
   try {
     const users = await loadUsers();
     const admin = users.find((u) => u.id === authed.userId);
@@ -213,7 +249,11 @@ router.post("/auth/users", requireAuth, async (req, res) => {
     }
 
     const permissions =
+<<<<<<< HEAD
       role === "manager" ? MANAGER_PERMISSIONS : CASHIER_PERMISSIONS;
+=======
+      role === "admin" ? ADMIN_PERMISSIONS : role === "manager" ? { ...ADMIN_PERMISSIONS, manageEmployees: false, manageSettings: false } : CASHIER_PERMISSIONS;
+>>>>>>> 044d5891246a55b19f65c682d0836a79ef42346e
 
     const newUser: StoredUser = {
       id: makeId(),
@@ -227,7 +267,11 @@ router.post("/auth/users", requireAuth, async (req, res) => {
       active: true,
     };
 
+<<<<<<< HEAD
     const updated = [...users, newUser];
+=======
+    const updated = mergeArraysById(users, [newUser]) as StoredUser[];
+>>>>>>> 044d5891246a55b19f65c682d0836a79ef42346e
     await saveUsers(updated);
 
     logger.info({ createdBy: admin.id, newUserId: newUser.id }, "Employee created");

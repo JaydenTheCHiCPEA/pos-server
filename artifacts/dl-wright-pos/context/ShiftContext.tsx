@@ -2,7 +2,10 @@ import React, { createContext, useCallback, useContext, useEffect, useState } fr
 import { loadData, saveData } from "@/utils/storage";
 import { generateId } from "@/utils/format";
 import { useSync } from "@/context/SyncContext";
+<<<<<<< HEAD
 import { EMPTY_SHIFTS } from "@/utils/empty-data";
+=======
+>>>>>>> 044d5891246a55b19f65c682d0836a79ef42346e
 import type { Shift, CashMovement, Transaction } from "@/types";
 
 interface ShiftContextValue {
@@ -14,7 +17,10 @@ interface ShiftContextValue {
   addCashMovement: (type: "in" | "out", amount: number, note: string) => void;
   recordSale: (total: number) => void;
   getExpectedCash: () => number;
+<<<<<<< HEAD
   wipeAllData: () => Promise<void>;
+=======
+>>>>>>> 044d5891246a55b19f65c682d0836a79ef42346e
 }
 
 export const ShiftContext = createContext<ShiftContextValue | null>(null);
@@ -120,11 +126,14 @@ export function ShiftProvider({ children }: { children: React.ReactNode }) {
     return currentShift.openingCash + cashIn - cashOut + currentShift.salesTotal;
   }
 
+<<<<<<< HEAD
   async function wipeAllData(): Promise<void> {
     setCurrentShift(null);
     setAllShifts(EMPTY_SHIFTS);
   }
 
+=======
+>>>>>>> 044d5891246a55b19f65c682d0836a79ef42346e
   return (
     <ShiftContext.Provider
       value={{
@@ -136,7 +145,10 @@ export function ShiftProvider({ children }: { children: React.ReactNode }) {
         addCashMovement,
         recordSale,
         getExpectedCash,
+<<<<<<< HEAD
         wipeAllData,
+=======
+>>>>>>> 044d5891246a55b19f65c682d0836a79ef42346e
       }}
     >
       {children}

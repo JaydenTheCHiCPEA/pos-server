@@ -13,7 +13,11 @@ import { useColors } from "@/hooks/useColors";
 import type { User, UserRole } from "@/types";
 import { formatCurrency, formatDateTime, formatDuration } from "@/utils/format";
 
+<<<<<<< HEAD
 const ASSIGNABLE_ROLES: UserRole[] = ["cashier", "manager"];
+=======
+const ROLES: UserRole[] = ["cashier", "manager", "admin"];
+>>>>>>> 044d5891246a55b19f65c682d0836a79ef42346e
 const ROLE_COLORS: Record<UserRole, string> = {
   admin: "#ED4245",
   manager: "#FAA61A",
@@ -59,10 +63,13 @@ export default function EmployeesScreen() {
       Alert.alert("Missing Info", "Name, username, and password are required.");
       return;
     }
+<<<<<<< HEAD
     if (!editing && frole === "admin") {
       Alert.alert("Not Allowed", "Additional admin accounts cannot be created.");
       return;
     }
+=======
+>>>>>>> 044d5891246a55b19f65c682d0836a79ef42346e
     const data = {
       name: fname.trim(), username: fusername.trim().toLowerCase(), password: fpassword,
       role: frole, salary: parseFloat(fsalary) || 0, hourlyRate: parseFloat(fhourly) || 0,
@@ -202,7 +209,11 @@ export default function EmployeesScreen() {
             <View style={s.field}>
               <Text style={s.fieldLabel}>Role</Text>
               <View style={s.optionRow}>
+<<<<<<< HEAD
                 {(editing?.role === "admin" ? (["admin"] as UserRole[]) : ASSIGNABLE_ROLES).map(role => (
+=======
+                {ROLES.map(role => (
+>>>>>>> 044d5891246a55b19f65c682d0836a79ef42346e
                   <TouchableOpacity key={role} style={[s.optionChip, { backgroundColor: frole === role ? ROLE_COLORS[role] + "22" : colors.surface, borderColor: frole === role ? ROLE_COLORS[role] : colors.border }]} onPress={() => setFrole(role)}>
                     <Text style={{ color: frole === role ? ROLE_COLORS[role] : colors.foreground, fontWeight: "700", fontSize: 13, textTransform: "capitalize" }}>{role}</Text>
                   </TouchableOpacity>

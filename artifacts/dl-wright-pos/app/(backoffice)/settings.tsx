@@ -10,7 +10,10 @@ import { useAuth } from "@/context/AuthContext";
 import { useStore } from "@/context/StoreContext";
 import { useSync } from "@/context/SyncContext";
 import { useTheme } from "@/context/ThemeContext";
+<<<<<<< HEAD
 import { useWipeAllData } from "@/hooks/useWipeAllData";
+=======
+>>>>>>> 044d5891246a55b19f65c682d0836a79ef42346e
 import { useColors } from "@/hooks/useColors";
 import type { Category, DiscountRule, TaxRate } from "@/types";
 
@@ -26,14 +29,20 @@ export default function SettingsScreen() {
   const { store, categories, taxRates, discountRules, updateStore, addCategory, updateCategory, deleteCategory, addTaxRate, updateTaxRate, deleteTaxRate, addDiscountRule, updateDiscountRule, deleteDiscountRule } = useStore();
   const { theme, setThemeOption, currencySymbol, setCurrencySymbol } = useTheme();
   const { isOnline, isSyncing, lastSyncAt, pendingSync, serverUrl, syncNow } = useSync();
+<<<<<<< HEAD
   const { wipeAllData, canWipe } = useWipeAllData();
+=======
+>>>>>>> 044d5891246a55b19f65c682d0836a79ef42346e
 
   const [activeSection, setActiveSection] = useState<Section>("store");
   const [toast, setToast] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<Confirm>(null);
+<<<<<<< HEAD
   const [wipeModal, setWipeModal] = useState(false);
   const [wipeConfirmText, setWipeConfirmText] = useState("");
   const [wiping, setWiping] = useState(false);
+=======
+>>>>>>> 044d5891246a55b19f65c682d0836a79ef42346e
 
   function showToast(msg: string) {
     setToast(msg);
@@ -329,6 +338,7 @@ export default function SettingsScreen() {
         >
           <Text style={st.saveBtnText}>{isSyncing ? "Syncing…" : "Sync Now"}</Text>
         </TouchableOpacity>
+<<<<<<< HEAD
 
         {canWipe ? (
           <>
@@ -345,6 +355,8 @@ export default function SettingsScreen() {
             </TouchableOpacity>
           </>
         ) : null}
+=======
+>>>>>>> 044d5891246a55b19f65c682d0836a79ef42346e
       </ScrollView>
     );
   }
@@ -531,6 +543,7 @@ export default function SettingsScreen() {
           </View>
         </View>
       </Modal>
+<<<<<<< HEAD
 
       {/* Wipe all data dialog */}
       <Modal visible={wipeModal} animationType="fade" transparent onRequestClose={() => !wiping && setWipeModal(false)}>
@@ -572,6 +585,8 @@ export default function SettingsScreen() {
           </View>
         </View>
       </Modal>
+=======
+>>>>>>> 044d5891246a55b19f65c682d0836a79ef42346e
     </View>
   );
 }
