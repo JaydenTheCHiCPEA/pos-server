@@ -3,51 +3,15 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { loadData, saveData, SYNC_STORAGE_KEYS } from "@/utils/storage";
 import { generateId } from "@/utils/format";
 import { useSync } from "@/context/SyncContext";
+import {
+  EMPTY_CATEGORIES,
+  EMPTY_DISCOUNT_RULES,
+  EMPTY_ITEMS,
+  EMPTY_STORE,
+  EMPTY_TAX_RATES,
+  saveEmptyBusinessData,
+} from "@/utils/empty-data";
 import type { Item, Category, TaxRate, Transaction, DiscountRule, Store } from "@/types";
-
-const DEFAULT_CATEGORIES: Category[] = [
-  { id: "cat1", name: "Food", color: "#FF6B6B" },
-  { id: "cat2", name: "Beverages", color: "#4ECDC4" },
-  { id: "cat3", name: "Electronics", color: "#45B7D1" },
-  { id: "cat4", name: "Clothing", color: "#96CEB4" },
-  { id: "cat5", name: "General", color: "#FFEAA7" },
-];
-
-const DEFAULT_TAX_RATES: TaxRate[] = [
-  { id: "tax1", name: "GCT", rate: 15, isDefault: true },
-  { id: "tax2", name: "None", rate: 0, isDefault: false },
-];
-
-const DEFAULT_ITEMS: Item[] = [
-  { id: "i1", name: "Burger", price: 8.99, cost: 3.5, categoryId: "cat1", stock: 50, minStock: 10, taxRateId: "tax1", imageUri: null, barcode: null, active: true },
-  { id: "i2", name: "Coffee", price: 4.5, cost: 0.8, categoryId: "cat2", stock: 100, minStock: 20, taxRateId: "tax1", imageUri: null, barcode: null, active: true },
-  { id: "i3", name: "Sandwich", price: 6.99, cost: 2.5, categoryId: "cat1", stock: 30, minStock: 5, taxRateId: "tax1", imageUri: null, barcode: null, active: true },
-  { id: "i4", name: "Soda", price: 2.5, cost: 0.5, categoryId: "cat2", stock: 200, minStock: 30, taxRateId: "tax1", imageUri: null, barcode: null, active: true },
-  { id: "i5", name: "T-Shirt", price: 19.99, cost: 8.0, categoryId: "cat4", stock: 25, minStock: 5, taxRateId: "tax2", imageUri: null, barcode: null, active: true },
-  { id: "i6", name: "Water", price: 1.5, cost: 0.3, categoryId: "cat2", stock: 150, minStock: 20, taxRateId: "tax1", imageUri: null, barcode: null, active: true },
-  { id: "i7", name: "Headphones", price: 49.99, cost: 20.0, categoryId: "cat3", stock: 10, minStock: 3, taxRateId: "tax2", imageUri: null, barcode: null, active: true },
-  { id: "i8", name: "Notebook", price: 3.99, cost: 1.0, categoryId: "cat5", stock: 4, minStock: 5, taxRateId: "tax2", imageUri: null, barcode: null, active: true },
-  { id: "i9", name: "Pizza Slice", price: 5.99, cost: 2.0, categoryId: "cat1", stock: 20, minStock: 5, taxRateId: "tax1", imageUri: null, barcode: null, active: true },
-  { id: "i10", name: "Juice", price: 3.5, cost: 0.9, categoryId: "cat2", stock: 80, minStock: 15, taxRateId: "tax1", imageUri: null, barcode: null, active: true },
-  { id: "i11", name: "Chips", price: 2.99, cost: 0.8, categoryId: "cat5", stock: 60, minStock: 10, taxRateId: "tax1", imageUri: null, barcode: null, active: true },
-  { id: "i12", name: "USB Cable", price: 9.99, cost: 3.0, categoryId: "cat3", stock: 15, minStock: 5, taxRateId: "tax2", imageUri: null, barcode: null, active: true },
-];
-
-const DEFAULT_DISCOUNT_RULES: DiscountRule[] = [
-  { id: "d1", name: "Staff Discount", type: "percent", value: 15, requiresApproval: false, active: true },
-  { id: "d2", name: "Manager Special", type: "percent", value: 25, requiresApproval: true, active: true },
-  { id: "d3", name: "$5 Off", type: "amount", value: 5, requiresApproval: false, active: true },
-];
-
-const DEFAULT_STORE: Store = {
-  id: "store1",
-  name: "D.L. Wright Store",
-  address: "123 Main Street, Kingston",
-  phone: "(876) 555-0100",
-  email: "info@dlwright.com",
-  taxId: "TRN-001",
-  receiptFooter: "Thank you for your business!",
-};
 
 const ALL_STORAGE_KEYS = SYNC_STORAGE_KEYS.filter((k) => k !== "users" && k !== "theme_option" && k !== "currency_symbol");
 
@@ -82,22 +46,22 @@ export const StoreContext = createContext<StoreContextValue | null>(null);
 
 export function StoreProvider({ children }: { children: React.ReactNode }) {
   const { registerReload } = useSync();
-  const [items, setItems] = useState<Item[]>(DEFAULT_ITEMS);
-  const [categories, setCategories] = useState<Category[]>(DEFAULT_CATEGORIES);
-  const [taxRates, setTaxRates] = useState<TaxRate[]>(DEFAULT_TAX_RATES);
+  const [items, setItems] = useState<Item[]>(EMPTY_ITEMS);
+  const [categories, setCategories] = useState<Category[]>(EMPTY_CATEGORIES);
+  const [taxRates, setTaxRates] = useState<TaxRate[]>(EMPTY_TAX_RATES);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [discountRules, setDiscountRules] = useState<DiscountRule[]>(DEFAULT_DISCOUNT_RULES);
-  const [store, setStore] = useState<Store>(DEFAULT_STORE);
+  const [discountRules, setDiscountRules] = useState<DiscountRule[]>(EMPTY_DISCOUNT_RULES);
+  const [store, setStore] = useState<Store>(EMPTY_STORE);
 
   const reloadFromStorage = useCallback(async () => {
     const [loadedItems, loadedCategories, loadedTaxRates, loadedTransactions, loadedDiscountRules, loadedStore] =
       await Promise.all([
-        loadData<Item[]>("items", DEFAULT_ITEMS),
-        loadData<Category[]>("categories", DEFAULT_CATEGORIES),
-        loadData<TaxRate[]>("tax_rates", DEFAULT_TAX_RATES),
+        loadData<Item[]>("items", EMPTY_ITEMS),
+        loadData<Category[]>("categories", EMPTY_CATEGORIES),
+        loadData<TaxRate[]>("tax_rates", EMPTY_TAX_RATES),
         loadData<Transaction[]>("transactions", []),
-        loadData<DiscountRule[]>("discount_rules", DEFAULT_DISCOUNT_RULES),
-        loadData<Store>("store", DEFAULT_STORE),
+        loadData<DiscountRule[]>("discount_rules", EMPTY_DISCOUNT_RULES),
+        loadData<Store>("store", EMPTY_STORE),
       ]);
     setItems(loadedItems);
     setCategories(loadedCategories);
@@ -175,12 +139,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     try {
       await AsyncStorage.multiRemove(ALL_STORAGE_KEYS);
     } catch {}
-    setItems(DEFAULT_ITEMS);
-    setCategories(DEFAULT_CATEGORIES);
-    setTaxRates(DEFAULT_TAX_RATES);
+    await saveEmptyBusinessData(saveData);
+    setItems(EMPTY_ITEMS);
+    setCategories(EMPTY_CATEGORIES);
+    setTaxRates(EMPTY_TAX_RATES);
     setTransactions([]);
-    setDiscountRules(DEFAULT_DISCOUNT_RULES);
-    setStore(DEFAULT_STORE);
+    setDiscountRules(EMPTY_DISCOUNT_RULES);
+    setStore(EMPTY_STORE);
   }
 
   return (

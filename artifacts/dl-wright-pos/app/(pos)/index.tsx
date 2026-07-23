@@ -17,9 +17,6 @@ import { useColors } from "@/hooks/useColors";
 import type { CartItem, Item } from "@/types";
 import { formatCurrency, formatDuration, generateReceiptNumber } from "@/utils/format";
 
-/* ── helpers ── */
-function generateId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
-
 export default function POSScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -43,12 +40,15 @@ export default function POSScreen() {
   /* ── shift timer ── */
   const [shiftTime, setShiftTime] = useState("0h 0m");
   useEffect(() => {
-    if (!currentShift) return;
+    if (!currentShift) {
+      setShiftTime("0h 0m");
+      return;
+    }
     const update = () => setShiftTime(formatDuration(currentShift.startTime));
     update();
-    const id = setInterval(update, 30000);
+    const id = setInterval(update, 60000);
     return () => clearInterval(id);
-  }, [currentShift?.startTime]);
+  }, [currentShift]);
 
   /* ── toast / confirm ── */
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
@@ -385,16 +385,19 @@ export default function POSScreen() {
           </View>
           {hasPermission("openCashDrawer") ? (
             <TouchableOpacity style={[s.hBtn, { backgroundColor: colors.surface, borderColor: colors.border }]} onPress={() => setAddCashVisible(true)}>
+              <Text style={{ color: colors.mutedForeground, fontSize: 12, fontWeight: "700", paddingRight: 6 }}>Register</Text>
               <Feather name="dollar-sign" size={15} color={colors.mutedForeground} />
             </TouchableOpacity>
           ) : null}
           {hasPermission("performRefunds") ? (
             <TouchableOpacity style={[s.hBtn, { backgroundColor: colors.surface, borderColor: colors.border }]} onPress={() => setRefundVisible(true)}>
+              <Text style={{ color: colors.mutedForeground, fontSize: 12, fontWeight: "700", paddingRight: 6 }}>Refund</Text>
               <Feather name="rotate-ccw" size={15} color={colors.mutedForeground} />
             </TouchableOpacity>
           ) : null}
           {hasPermission("accessBackOffice") ? (
             <TouchableOpacity style={[s.hBtn, { backgroundColor: colors.surface, borderColor: colors.border }]} onPress={() => router.push("/(backoffice)")}>
+              <Text style={{ color: colors.mutedForeground, fontSize: 12, fontWeight: "700", paddingRight: 6 }}>Back Office</Text>
               <Feather name="grid" size={15} color={colors.mutedForeground} />
             </TouchableOpacity>
           ) : null}
@@ -853,7 +856,7 @@ const s = StyleSheet.create({
   headerRight: { flexDirection: "row", alignItems: "center", gap: 6 },
   storeName: { fontSize: 16, fontWeight: "700" },
   userLine: { fontSize: 11, marginTop: 2 },
-  hBtn: { width: 32, height: 32, borderRadius: 8, borderWidth: 1, alignItems: "center", justifyContent: "center" },
+  hBtn: { width: 100, height: 32, borderRadius: 8, borderWidth: 1, alignItems: "center",flexDirection: "row", justifyContent: "center" },
   syncIndicator: { width: 32, height: 32, borderRadius: 8, borderWidth: 1, alignItems: "center", justifyContent: "center" },
   closeBtn: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, paddingVertical: 7, borderRadius: 8, borderWidth: 1 },
   closeBtnTxt: { fontSize: 12, fontWeight: "700" },

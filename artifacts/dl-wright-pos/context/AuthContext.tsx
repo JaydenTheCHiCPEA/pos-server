@@ -1,8 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
-import { loadData, saveData } from "@/utils/storage";
+import { loadData, saveData, checkServerHealth, getServerUrl } from "@/utils/storage";
 import { generateId } from "@/utils/format";
-import { serverLogin, serverRegister, clearServerAuth } from "@/utils/api";
-import { checkServerHealth, getServerUrl } from "@/utils/storage";
+import { serverLogin, serverRegister, serverCreateUser, clearServerAuth } from "@/utils/api";
 import { useSync } from "@/context/SyncContext";
 import { EMPTY_USERS, saveEmptyBusinessData } from "@/utils/empty-data";
 import type { User, UserRole, Permissions } from "@/types";
@@ -41,7 +40,7 @@ interface AuthContextValue {
   login: (username: string, password: string) => Promise<boolean>;
   register: (name: string, username: string, password: string) => Promise<{ ok: boolean; error?: string }>;
   logout: () => void;
-  addUser: (u: Omit<User, "id">) => void;
+  addUser: (u: Omit<User, "id">) => Promise<{ ok: boolean; error?: string }>;
   updateUser: (id: string, u: Partial<User>) => void;
   deleteUser: (id: string) => void;
   hasPermission: (p: keyof Permissions) => boolean;
@@ -71,25 +70,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => registerReload(reloadFromStorage), [registerReload, reloadFromStorage]);
 
   async function login(username: string, password: string): Promise<boolean> {
-    const freshUsers = await loadData<User[]>("users", EMPTY_USERS);
-    const localUser = freshUsers.find(
-      (u) => u.username.toLowerCase() === username.toLowerCase() && u.password === password && u.active,
-    );
-
     const serverUrl = getServerUrl();
     if (serverUrl && await checkServerHealth(serverUrl)) {
       const result = await serverLogin(username, password);
       if (result.ok && result.user) {
+        const serverUsers = await loadData<User[]>("users", EMPTY_USERS);
+        const match = serverUsers.find(
+          (u) => u.username.toLowerCase() === username.toLowerCase() && u.active,
+        );
+        if (match) {
+          setUsers(serverUsers);
+          setCurrentUser({ ...match, password });
+          return true;
+        }
         const serverUser = { ...result.user, password } as User;
-        const merged = freshUsers.some((u) => u.id === serverUser.id)
-          ? freshUsers.map((u) => (u.id === serverUser.id ? { ...u, ...serverUser, password } : u))
-          : [...freshUsers, serverUser];
-        setUsers(merged);
-        saveData("users", merged);
+        const updated = serverUsers.some((u) => u.id === serverUser.id)
+          ? serverUsers.map((u) => (u.id === serverUser.id ? serverUser : u))
+          : [...serverUsers, serverUser];
+        setUsers(updated);
+        await saveData("users", updated);
         setCurrentUser(serverUser);
         return true;
       }
     }
+
+    const freshUsers = await loadData<User[]>("users", EMPTY_USERS);
+    const localUser = freshUsers.find(
+      (u) => u.username.toLowerCase() === username.toLowerCase() && u.password === password && u.active,
+    );
 
     if (localUser) {
       setCurrentUser(localUser);
@@ -150,12 +158,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     void clearServerAuth();
   }
 
-  function addUser(u: Omit<User, "id">) {
-    if (u.role === "admin") return;
-    const newUser = { ...u, id: generateId() };
-    const updated = [...users, newUser];
+  async function addUser(u: Omit<User, "id">): Promise<{ ok: boolean; error?: string }> {
+    if (u.role === "admin") {
+      return { ok: false, error: "Additional admin accounts cannot be created." };
+    }
+    if (u.password.length < 6) {
+      return { ok: false, error: "Password must be at least 6 characters." };
+    }
+
+    const freshUsers = await loadData<User[]>("users", EMPTY_USERS);
+    const normalizedUsername = u.username.trim().toLowerCase();
+    if (freshUsers.some((usr) => usr.username.toLowerCase() === normalizedUsername)) {
+      return { ok: false, error: "Username already exists." };
+    }
+
+    let newUser: User = {
+      ...u,
+      id: generateId(),
+      username: normalizedUsername,
+      permissions: u.permissions ?? getDefaultPermissions(u.role),
+      active: true,
+    };
+
+    const serverUrl = getServerUrl();
+    if (serverUrl && await checkServerHealth(serverUrl)) {
+      const result = await serverCreateUser({
+        name: newUser.name,
+        username: newUser.username,
+        password: newUser.password,
+        role: newUser.role,
+        salary: newUser.salary,
+        hourlyRate: newUser.hourlyRate,
+      });
+      if (!result.ok) {
+        return { ok: false, error: result.error ?? "Failed to create employee on server." };
+      }
+      if (result.user) {
+        newUser = { ...newUser, ...result.user, password: newUser.password };
+      }
+    }
+
+    const updated = [...freshUsers, newUser];
     setUsers(updated);
-    saveData("users", updated);
+    await saveData("users", updated);
+    return { ok: true };
   }
 
   function updateUser(id: string, u: Partial<User>) {
@@ -178,6 +224,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   async function wipeAllData(): Promise<void> {
     setUsers(EMPTY_USERS);
     setCurrentUser(null);
+    await saveData("users", EMPTY_USERS);
   }
 
   return (

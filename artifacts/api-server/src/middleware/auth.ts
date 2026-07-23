@@ -1,7 +1,6 @@
 /**
- * Optional auth middleware — attaches `req.userId` when a valid Bearer token is present.
- * Routes that use this middleware still allow unauthenticated access where noted;
- * sync endpoints remain open so offline-first clients can push/pull without a token.
+ * Auth middleware — attaches `req.userId` when a valid Bearer token is present.
+ * Storage sync endpoints require authentication to prevent cross-device data pollution.
  */
 import type { Request, RequestHandler } from "express";
 import { getSessionUserId } from "../lib/sessions";

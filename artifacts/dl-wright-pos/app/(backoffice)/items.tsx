@@ -138,6 +138,7 @@ export default function ItemsScreen() {
       {/* Category filter */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[s.catScroll, { borderBottomColor: colors.border }]}>
         <TouchableOpacity style={[s.catChip, { backgroundColor: !selectedCat ? colors.primary : colors.surface, borderColor: !selectedCat ? colors.primary : colors.border }]} onPress={() => setSelectedCat(null)}>
+          {/*Redundant*/}
           <Text style={{ color: !selectedCat ? "#fff" : colors.foreground, fontWeight: "600", fontSize: 12 }}>All</Text>
         </TouchableOpacity>
         {categories.map(cat => (
@@ -236,7 +237,7 @@ export default function ItemsScreen() {
 
             <View style={s.field}>
               <Text style={[s.fieldLabel, { color: colors.mutedForeground }]}>Item Name</Text>
-              <TextInput style={[s.fieldInput, { color: colors.foreground, backgroundColor: colors.surface, borderColor: colors.border }]} value={fname} onChangeText={setFname} placeholder="e.g. Burger" placeholderTextColor={colors.mutedForeground} />
+              <TextInput style={[s.fieldInput, { color: colors.foreground, backgroundColor: colors.surface, borderColor: colors.border }]} value={fname} onChangeText={setFname} placeholder="Enter Item Name" placeholderTextColor={colors.mutedForeground} />
             </View>
             <View style={s.twoCol}>
               <View style={{ flex: 1 }}>
@@ -331,8 +332,8 @@ const s = StyleSheet.create({
   searchTxt: { flex: 1, fontSize: 14 },
   addBtn: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 14, paddingVertical: 9, borderRadius: 10 },
   addBtnTxt: { color: "#fff", fontWeight: "700", fontSize: 13 },
-  catScroll: { paddingHorizontal: 12, paddingVertical: 8, gap: 8, borderBottomWidth: 1 },
-  catChip: { flexDirection: "row", alignItems: "center", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1, gap: 5 },
+  catScroll: { paddingHorizontal: 12, paddingVertical: 12, gap: 2, borderBottomWidth: 1, height: 60 },
+  catChip: { flexDirection: "row", alignItems: "center", paddingHorizontal: 15, paddingVertical: 0, borderRadius: 10, borderWidth: 1, gap: 0 },
   catDot: { width: 8, height: 8, borderRadius: 4 },
   itemCard: { flexDirection: "row", alignItems: "center", marginHorizontal: 12, marginVertical: 5, borderRadius: 14, borderWidth: 1, overflow: "hidden" },
   itemTouchable: { flexDirection: "row", alignItems: "center", gap: 12, padding: 12 },
@@ -368,4 +369,5 @@ const s = StyleSheet.create({
   confirmBox: { borderRadius: 16, borderWidth: 1, padding: 24, width: "100%", maxWidth: 340 },
   confirmMsg: { fontSize: 16, fontWeight: "600" },
   confirmBtn: { flex: 1, height: 44, borderRadius: 10, alignItems: "center", justifyContent: "center" },
+  iconButton: { width: 40, height: 15, borderRadius: 20, alignItems: "center", justifyContent: "center" },
 });

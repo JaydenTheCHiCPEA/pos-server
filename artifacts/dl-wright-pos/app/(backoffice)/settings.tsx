@@ -291,12 +291,6 @@ export default function SettingsScreen() {
         <Text style={[st.sectionTitle, { color: colors.foreground }]}>Cloud Sync</Text>
 
         <View style={[st.row, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <View style={{ flex: 1, gap: 4 }}>
-            <Text style={[st.rowLabel, { color: colors.foreground }]}>Server</Text>
-            <Text style={{ color: colors.mutedForeground, fontSize: 12 }} numberOfLines={2}>
-              {serverUrl || "Not configured — set EXPO_PUBLIC_DOMAIN"}
-            </Text>
-          </View>
           <View style={[st.statusDot, { backgroundColor: statusColor }]} />
         </View>
 

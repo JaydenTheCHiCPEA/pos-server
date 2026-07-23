@@ -6,12 +6,10 @@
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal",
-      "pnpm": "11.4.0"
+      "distribution": "internal"
     },
     "preview": {
-      "distribution": "internal",
-      "pnpm": "11.4.0"
+      "distribution": "internal"
     },
     "production": {
       "autoIncrement": true

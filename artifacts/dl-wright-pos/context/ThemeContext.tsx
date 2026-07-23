@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
+import { useColorScheme } from "react-native";
 import { loadData, saveData } from "@/utils/storage";
 
 export type ThemeOption = "light" | "dark" | "system";
@@ -14,6 +15,7 @@ interface ThemeContextValue {
 export const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  const systemScheme = useColorScheme();
   const [themeOption, setThemeOptionState] = useState<ThemeOption>("dark");
   const [currencySymbol, setCurrencySymbolState] = useState("$");
 
@@ -32,7 +34,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     saveData("currency_symbol", s);
   }
 
-  const theme: "light" | "dark" = themeOption === "system" ? "dark" : themeOption;
+  const theme: "light" | "dark" =
+    themeOption === "system" ? (systemScheme === "light" ? "light" : "dark") : themeOption;
 
   return (
     <ThemeContext.Provider value={{ themeOption, theme, setThemeOption, currencySymbol, setCurrencySymbol }}>

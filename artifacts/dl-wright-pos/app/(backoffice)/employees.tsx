@@ -54,9 +54,13 @@ export default function EmployeesScreen() {
     setShowModal(true);
   }
 
-  function handleSave() {
+  async function handleSave() {
     if (!fname.trim() || !fusername.trim() || !fpassword.trim()) {
       Alert.alert("Missing Info", "Name, username, and password are required.");
+      return;
+    }
+    if (fpassword.length < 6) {
+      Alert.alert("Invalid Password", "Password must be at least 6 characters.");
       return;
     }
     if (!editing && frole === "admin") {
@@ -69,8 +73,16 @@ export default function EmployeesScreen() {
       permissions: editing ? editing.permissions : getDefaultPermissions(frole),
       active: true,
     };
-    if (editing) { updateUser(editing.id, data); }
-    else { addUser(data); }
+    if (editing) {
+      updateUser(editing.id, data);
+      setShowModal(false);
+      return;
+    }
+    const result = await addUser(data);
+    if (!result.ok) {
+      Alert.alert("Could Not Create Employee", result.error ?? "Please try again.");
+      return;
+    }
     setShowModal(false);
   }
 

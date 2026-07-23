@@ -1,9 +1,5 @@
 /**
-<<<<<<< HEAD
  * Server entry point — initializes Neon DB, then listens.
-=======
- * Server entry point — initializes Neon DB, seeds demo data, then listens.
->>>>>>> 044d5891246a55b19f65c682d0836a79ef42346e
  */
 import app from "./app";
 import { logger } from "./lib/logger";

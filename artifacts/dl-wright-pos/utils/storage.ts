@@ -122,19 +122,30 @@ export async function syncAllToServer(
     return { ok: false, error: "Server URL not configured (EXPO_PUBLIC_DOMAIN)" };
   }
 
+  const token = await getAuthToken();
+  if (!token) {
+    return { ok: false, error: "Not authenticated — sign in to sync" };
+  }
+
   try {
     const storage: Record<string, unknown> = {};
     for (const key of keys) {
       try {
         const v = await AsyncStorage.getItem(key);
-        storage[key] = v === null ? null : JSON.parse(v);
+        if (v === null) continue;
+        storage[key] = JSON.parse(v);
       } catch {
-        storage[key] = null;
+        // skip keys that fail to parse
       }
     }
 
+    if (Object.keys(storage).length === 0) {
+      devLog("info", "Nothing to push — no local keys present");
+      return { ok: true };
+    }
+
     const endpoint = `${base}/api/storage/sync`;
-    devLog("info", `POST ${endpoint}`, `Pushing ${keys.length} keys`);
+    devLog("info", `POST ${endpoint}`, `Pushing ${Object.keys(storage).length} keys`);
 
     const res = await fetch(endpoint, {
       method: "POST",
@@ -164,6 +175,11 @@ export async function fetchAllFromServer(
   const base = url.replace(/\/$/, "");
   if (!base) {
     return { ok: false, error: "Server URL not configured (EXPO_PUBLIC_DOMAIN)" };
+  }
+
+  const token = await getAuthToken();
+  if (!token) {
+    return { ok: false, error: "Not authenticated — sign in to sync" };
   }
 
   try {
@@ -206,8 +222,18 @@ export async function syncBothDirections(
 ): Promise<{ ok: boolean; error?: string }> {
   devLog("info", "Starting sync", url || "(no url)");
 
-  const push = await syncAllToServer(url, keys);
-  if (!push.ok) return push;
+  const token = await getAuthToken();
+  if (!token) {
+    devLog("warn", "Sync skipped — not signed in");
+    return { ok: false, error: "Not authenticated" };
+  }
+
+  // Push local changes first — pulling before push was wiping freshly clocked-in shifts.
+  const pending = await isSyncPending();
+  if (pending) {
+    const push = await syncAllToServer(url, keys);
+    if (!push.ok) return push;
+  }
 
   const pull = await fetchAllFromServer(url, keys);
   if (!pull.ok) return pull;

@@ -27,8 +27,8 @@ async function loadUsers(): Promise<StoredUser[]> {
   return row.value as StoredUser[];
 }
 
-// POST /api/storage/sync — replace incoming keys with client snapshot
-router.post("/storage/sync", async (req, res) => {
+// POST /api/storage/sync — replace incoming keys with client snapshot (auth required)
+router.post("/storage/sync", requireAuth, async (req, res) => {
   const payload = req.body?.storage;
   if (!payload || typeof payload !== "object") {
     logger.warn("POST /storage/sync rejected — missing storage payload");
@@ -83,8 +83,8 @@ router.post("/storage/wipe", requireAuth, async (req, res) => {
   }
 });
 
-// GET /api/storage — return all stored JSON blobs for client pull
-router.get("/storage", async (_req, res) => {
+// GET /api/storage — return all stored JSON blobs for client pull (auth required)
+router.get("/storage", requireAuth, async (_req, res) => {
   try {
     await ensureStorageTable();
     const rows = await db.select().from(storageTable);

@@ -3,7 +3,7 @@
     "name": "D.L. WRIGHT POS",
     "slug": "dl-wright-pos",
     "version": "1.0.0",
-    "orientation": "portrait",
+    "orientation": "default",
     "icon": "./assets/images/icon.png",
     "scheme": "dl-wright-pos",
     "userInterfaceStyle": "automatic",
@@ -21,7 +21,7 @@
       }
     },
     "android": {
-      "package": "com.jayden_hindss.dlwrightpos"
+      "package": "com.newguyy.dlwrightpos"
     },
     "web": {
       "favicon": "./assets/images/icon.png"

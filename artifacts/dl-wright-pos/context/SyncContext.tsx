@@ -11,6 +11,7 @@ import { AppState, type AppStateStatus } from "react-native";
 import {
   checkServerHealth,
   devLog,
+  getAuthToken,
   getServerUrl,
   isSyncPending,
   registerSyncTrigger,
@@ -67,6 +68,12 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
       return false;
     }
 
+    const token = await getAuthToken();
+    if (!token) {
+      devLog("warn", "Sync skipped — not signed in");
+      return false;
+    }
+
     syncingRef.current = true;
     setIsSyncing(true);
 
@@ -109,7 +116,9 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
 
     if (serverUrl) {
       devLog("info", "App started", `Server: ${serverUrl}`);
-      void runSync();
+      void getAuthToken().then((token) => {
+        if (token) void runSync();
+      });
     } else {
       devLog("warn", "No server URL configured — set EXPO_PUBLIC_DOMAIN");
     }

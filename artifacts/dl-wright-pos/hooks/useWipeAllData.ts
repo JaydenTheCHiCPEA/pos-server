@@ -4,7 +4,8 @@ import { useAuth } from "@/context/AuthContext";
 import { useShift } from "@/context/ShiftContext";
 import { useStore } from "@/context/StoreContext";
 import { useSync } from "@/context/SyncContext";
-import { checkServerHealth, clearAllLocalStorage, getServerUrl, wipeServerStorage } from "@/utils/storage";
+import { EMPTY_SHIFTS, EMPTY_USERS, saveEmptyBusinessData } from "@/utils/empty-data";
+import { checkServerHealth, clearAllLocalStorage, getServerUrl, saveData, wipeServerStorage } from "@/utils/storage";
 
 export function useWipeAllData() {
   const { currentUser, hasPermission, wipeAllData: wipeAuth, logout } = useAuth();
@@ -29,6 +30,9 @@ export function useWipeAllData() {
     }
 
     await clearAllLocalStorage();
+    await saveEmptyBusinessData(saveData);
+    await saveData("users", EMPTY_USERS);
+    await saveData("shifts", EMPTY_SHIFTS);
     await wipeAuth();
     await wipeStore();
     await wipeShift();

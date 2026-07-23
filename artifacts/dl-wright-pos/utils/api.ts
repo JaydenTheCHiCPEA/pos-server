@@ -2,7 +2,7 @@
  * Server auth API — login and registration against the Render/Neon backend.
  * Falls back gracefully when offline; local AuthContext handles offline login.
  */
-import { getServerUrl, setAuthToken } from "@/utils/storage";
+import { getServerUrl, setAuthToken, getAuthToken } from "@/utils/storage";
 import type { User } from "@/types";
 
 export interface AuthResult {
@@ -53,6 +53,48 @@ export async function serverRegister(
   password: string,
 ): Promise<AuthResult> {
   return authFetch("/api/auth/register", { name, username, password });
+}
+
+export interface CreateUserPayload {
+  name: string;
+  username: string;
+  password: string;
+  role: string;
+  salary?: number;
+  hourlyRate?: number;
+}
+
+export async function serverCreateUser(payload: CreateUserPayload): Promise<AuthResult> {
+  const base = getServerUrl();
+  if (!base) {
+    return { ok: false, error: "Server URL not configured" };
+  }
+
+  try {
+    const token = await getAuthToken();
+    if (!token) {
+      return { ok: false, error: "Not authenticated" };
+    }
+
+    const res = await fetch(`${base}/api/auth/users`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      return { ok: false, error: data?.error ?? `Request failed (${res.status})` };
+    }
+
+    return { ok: true, user: data.user };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return { ok: false, error: msg };
+  }
 }
 
 export async function clearServerAuth(): Promise<void> {

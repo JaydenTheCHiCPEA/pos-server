@@ -10,17 +10,17 @@ import { BarChart, DonutChart, HorizontalBarChart, LineChart } from "@/component
 import { useStore } from "@/context/StoreContext";
 import { useTheme } from "@/context/ThemeContext";
 import { useColors } from "@/hooks/useColors";
+import { fonts } from "@/constants/typography";
 import { formatCurrency } from "@/utils/format";
+import {
+  type AnalyticsRange,
+  computeDashboardMetrics,
+  getPreviousRange,
+  getRangeStart,
+  pctChange,
+} from "@/utils/analytics";
 
-type Range = "today" | "week" | "month" | "year";
-
-function getRange(r: Range): Date {
-  const now = new Date();
-  if (r === "today") { const d = new Date(now); d.setHours(0, 0, 0, 0); return d; }
-  if (r === "week") { const d = new Date(now); d.setDate(d.getDate() - 7); return d; }
-  if (r === "month") { const d = new Date(now); d.setMonth(d.getMonth() - 1); return d; }
-  const d = new Date(now); d.setFullYear(d.getFullYear() - 1); return d;
-}
+type Range = AnalyticsRange;
 
 /* ── Standalone section wrapper — must NOT be defined inside another component ── */
 interface SectionProps {
@@ -44,32 +44,73 @@ function ChartSection({ title, children, cardBg, cardBorder, titleColor }: Secti
 export default function DashboardScreen() {
   const colors = useColors();
   const { width } = useWindowDimensions();
-  const { transactions, categories, items } = useStore();
+  const { transactions, categories, items, getLowStockItems } = useStore();
   const { currencySymbol } = useTheme();
 
   const [range, setRange] = useState<Range>("today");
 
   const isWide = Platform.OS === "web" && width >= 800;
 
-  const since = getRange(range);
+  const since = getRangeStart(range);
+  const metrics = useMemo(
+    () => computeDashboardMetrics(transactions, items, since),
+    [transactions, items, since],
+  );
   const filtered = useMemo(
     () => transactions.filter(t => t.type === "sale" && new Date(t.timestamp) >= since),
-    [transactions, range, since]
+    [transactions, since]
+  );
+  const refunds = useMemo(
+    () => transactions.filter(t => t.type === "refund" && new Date(t.timestamp) >= since),
+    [transactions, since]
   );
 
-  /* ── KPIs ── */
-  const netSales = filtered.reduce((s, t) => s + t.total, 0);
-  const grossProfit = filtered.reduce((s, t) => {
-    const cost = t.items.reduce((c, ci) => {
-      const item = items.find(i => i.id === ci.itemId);
-      return c + (item?.cost ?? 0) * ci.quantity;
-    }, 0);
-    return s + t.total - cost;
-  }, 0);
-  const txCount = filtered.length;
-  const avgSale = txCount > 0 ? netSales / txCount : 0;
-  const discountTotal = filtered.reduce((s, t) => s + t.discountAmount, 0);
-  const taxTotal = filtered.reduce((s, t) => s + t.taxAmount, 0);
+  const prevPeriod = getPreviousRange(range);
+  const prevNetSales = useMemo(() => {
+    const sales = transactions.filter(
+      (t) =>
+        t.type === "sale" &&
+        new Date(t.timestamp) >= prevPeriod.start &&
+        new Date(t.timestamp) <= prevPeriod.end,
+    );
+    const refundRows = transactions.filter(
+      (t) =>
+        t.type === "refund" &&
+        new Date(t.timestamp) >= prevPeriod.start &&
+        new Date(t.timestamp) <= prevPeriod.end,
+    );
+    const gross = sales.reduce((s, t) => s + t.total, 0);
+    const refunded = refundRows.reduce((s, t) => s + Math.abs(t.total), 0);
+    return gross - refunded;
+  }, [transactions, prevPeriod]);
+
+  const {
+    totalSales,
+    totalRefunds,
+    netSales,
+    grossProfit,
+    profitMarginPct,
+    saleCount: txCount,
+    refundCount,
+    itemsSold,
+    totalDiscounts: discountTotal,
+    totalTax: taxTotal,
+    avgSale,
+  } = metrics;
+  const lowStockCount = getLowStockItems().length;
+  const inventoryValue = items.reduce((s, i) => s + i.cost * i.stock, 0);
+  const salesChange = pctChange(netSales, prevNetSales);
+
+  /* ── Hour-of-day breakdown (today only) ── */
+  const hourlySales = useMemo(() => {
+    if (range !== "today") return [];
+    return Array.from({ length: 24 }, (_, hr) => {
+      const value = filtered
+        .filter(t => new Date(t.timestamp).getHours() === hr)
+        .reduce((s, t) => s + t.total, 0);
+      return { label: hr === 0 ? "12a" : hr < 12 ? `${hr}a` : hr === 12 ? "12p" : `${hr - 12}p`, value, color: colors.primary };
+    }).filter((_, hr) => hr >= 6 && hr <= 22);
+  }, [filtered, range, colors.primary]);
 
   /* ── Sales trend (7 slots) ── */
   const salesTrend = useMemo(() => {
@@ -150,10 +191,12 @@ export default function DashboardScreen() {
   const accentColors = [colors.primary, colors.success, colors.warning, colors.purple, colors.mutedForeground];
 
   const kpiCards = [
-    { label: "Net Sales", value: formatCurrency(netSales, currencySymbol), icon: "trending-up" as const, color: colors.primary },
-    { label: "Gross Profit", value: formatCurrency(grossProfit, currencySymbol), icon: "dollar-sign" as const, color: colors.success },
-    { label: "Transactions", value: String(txCount), icon: "shopping-bag" as const, color: colors.warning },
-    { label: "Avg. Sale", value: formatCurrency(avgSale, currencySymbol), icon: "activity" as const, color: colors.purple },
+    { label: "Net Sales", value: formatCurrency(netSales, currencySymbol), sub: salesChange ? `${salesChange} vs prior period` : "After refunds", icon: "trending-up" as const },
+    { label: "Gross Profit", value: formatCurrency(grossProfit, currencySymbol), sub: `${profitMarginPct.toFixed(1)}% margin on sales`, icon: "dollar-sign" as const },
+    { label: "Transactions", value: String(txCount), sub: `${itemsSold} items sold`, icon: "shopping-bag" as const },
+    { label: "Avg. Sale", value: formatCurrency(avgSale, currencySymbol), sub: "Per sale (before refunds)", icon: "activity" as const },
+    { label: "Refunds", value: formatCurrency(totalRefunds, currencySymbol), sub: refundCount > 0 ? `${refundCount} issued` : "None", icon: "rotate-ccw" as const },
+    { label: "Inventory", value: formatCurrency(inventoryValue, currencySymbol), sub: lowStockCount > 0 ? `${lowStockCount} low stock` : "Stock healthy", icon: "package" as const },
   ];
 
   /* shared ChartSection props */
@@ -164,9 +207,10 @@ export default function DashboardScreen() {
       {/* ── Header ── */}
       <View style={[st.header, { borderBottomColor: colors.border }]}>
         <View>
-          <Text style={[st.title, { color: colors.foreground }]}>Analytics</Text>
+          <Text style={[st.title, { color: colors.foreground }]}>Dashboard</Text>
           <Text style={[st.subtitle, { color: colors.mutedForeground }]}>
-            {txCount === 0 ? "No transactions yet" : `${txCount} transaction${txCount !== 1 ? "s" : ""}`}
+            {txCount === 0 ? "No sales in this period" : `${txCount} sale${txCount !== 1 ? "s" : ""} · ${formatCurrency(netSales, currencySymbol)} net (after refunds)`}
+            {salesChange ? ` · ${salesChange} vs prior` : ""}
           </Text>
         </View>
         <TouchableOpacity
@@ -205,16 +249,21 @@ export default function DashboardScreen() {
               style={[
                 st.kpiCard,
                 isWide && st.kpiCardWide,
-                { backgroundColor: k.color + "16", borderColor: k.color + "30" },
+                { backgroundColor: colors.card, borderColor: colors.border },
               ]}
             >
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 7, marginBottom: 6 }}>
-                <View style={[st.kpiIcon, { backgroundColor: k.color + "22" }]}>
-                  <Feather name={k.icon} size={13} color={k.color} />
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                <View style={[st.kpiIcon, { backgroundColor: colors.primary + "18" }]}>
+                  <Feather name={k.icon} size={14} color={colors.primary} />
                 </View>
-                <Text style={[st.kpiLabel, { color: k.color }]}>{k.label}</Text>
+                <Text style={[st.kpiLabel, { color: colors.mutedForeground }]}>{k.label}</Text>
               </View>
-              <Text style={[st.kpiVal, { color: k.color }]}>{k.value}</Text>
+              <Text style={[st.kpiVal, { color: colors.foreground }]}>{k.value}</Text>
+              {k.sub ? (
+                <Text style={[st.kpiSub, { color: k.sub.startsWith("+") ? colors.success : k.sub.startsWith("-") ? colors.destructive : colors.mutedForeground }]}>
+                  {k.sub}
+                </Text>
+              ) : null}
             </View>
           ))}
         </View>
@@ -238,8 +287,21 @@ export default function DashboardScreen() {
         ) : isWide ? (
           /* ═══════════ WIDE (≥800px) two-column layout ═══════════ */
           <>
+            {range === "today" && hourlySales.some(d => d.value > 0) && (
+              <ChartSection title="Sales by hour" {...sectionBase}>
+                <BarChart
+                  data={hourlySales}
+                  height={160}
+                  barColor={colors.primary}
+                  labelColor={colors.mutedForeground}
+                  gridColor={colors.border}
+                  formatValue={v => v > 0 ? formatCurrency(v, currencySymbol) : ""}
+                />
+              </ChartSection>
+            )}
+
             {hasTrend && (
-              <ChartSection title="SALES TREND" {...sectionBase}>
+              <ChartSection title="Sales trend" {...sectionBase}>
                 <LineChart
                   data={salesTrend}
                   height={200}
@@ -254,7 +316,7 @@ export default function DashboardScreen() {
             <View style={st.wideRow}>
               {byCategory.length > 0 && (
                 <View style={st.wideCol}>
-                  <ChartSection title="BY CATEGORY" {...sectionBase}>
+                  <ChartSection title="By category" {...sectionBase}>
                     <DonutChart
                       data={byCategory}
                       size={160}
@@ -268,7 +330,7 @@ export default function DashboardScreen() {
               )}
               {topItems.length > 0 && (
                 <View style={st.wideCol}>
-                  <ChartSection title="TOP PRODUCTS" {...sectionBase}>
+                  <ChartSection title="Top products" {...sectionBase}>
                     <HorizontalBarChart
                       data={topItems.map((it, i) => ({
                         label: it.name,
@@ -291,7 +353,7 @@ export default function DashboardScreen() {
             <View style={st.wideRow}>
               {byEmployee.length > 0 && (
                 <View style={st.wideCol}>
-                  <ChartSection title="BY EMPLOYEE" {...sectionBase}>
+                  <ChartSection title="By employee" {...sectionBase}>
                     <HorizontalBarChart
                       data={byEmployee.map(([name, amt]) => ({ label: name, value: amt }))}
                       barColor={colors.success}
@@ -305,14 +367,18 @@ export default function DashboardScreen() {
                 </View>
               )}
               <View style={st.wideCol}>
-                <ChartSection title="PAYMENT TYPES" {...sectionBase}>
+                <ChartSection title="Payment types" {...sectionBase}>
                   {Object.entries(byPayType).map(([type, amt]) => (
                     <PayRow key={type} type={type} amt={amt} currencySymbol={currencySymbol} colors={colors} />
                   ))}
                 </ChartSection>
-                <ChartSection title="SUMMARY" {...sectionBase}>
-                  <SummaryRow label="Total Discounts" value={formatCurrency(discountTotal, currencySymbol)} color={colors.warning} borderColor={colors.border} muted={colors.mutedForeground} />
-                  <SummaryRow label="Tax Collected" value={formatCurrency(taxTotal, currencySymbol)} color={colors.mutedForeground} borderColor={colors.border} muted={colors.mutedForeground} />
+                <ChartSection title="Summary" {...sectionBase}>
+                  <SummaryRow label="Total sales (before refunds)" value={formatCurrency(totalSales, currencySymbol)} color={colors.foreground} borderColor={colors.border} muted={colors.mutedForeground} />
+                  <SummaryRow label="Refunds issued" value={formatCurrency(totalRefunds, currencySymbol)} color={colors.destructive} borderColor={colors.border} muted={colors.mutedForeground} />
+                  <SummaryRow label="Net sales (after refunds)" value={formatCurrency(netSales, currencySymbol)} color={colors.primary} borderColor={colors.border} muted={colors.mutedForeground} />
+                  <SummaryRow label="Total discounts" value={formatCurrency(discountTotal, currencySymbol)} color={colors.warning} borderColor={colors.border} muted={colors.mutedForeground} />
+                  <SummaryRow label="Tax collected" value={formatCurrency(taxTotal, currencySymbol)} color={colors.mutedForeground} borderColor={colors.border} muted={colors.mutedForeground} />
+                  <SummaryRow label="Inventory value" value={formatCurrency(inventoryValue, currencySymbol)} color={colors.foreground} borderColor={colors.border} muted={colors.mutedForeground} />
                 </ChartSection>
               </View>
             </View>
@@ -320,8 +386,21 @@ export default function DashboardScreen() {
         ) : (
           /* ═══════════ NARROW (mobile) single column ═══════════ */
           <>
+            {range === "today" && hourlySales.some(d => d.value > 0) && (
+              <ChartSection title="Sales by hour" {...sectionBase}>
+                <BarChart
+                  data={hourlySales}
+                  height={160}
+                  barColor={colors.primary}
+                  labelColor={colors.mutedForeground}
+                  gridColor={colors.border}
+                  formatValue={v => v > 0 ? formatCurrency(v, currencySymbol) : ""}
+                />
+              </ChartSection>
+            )}
+
             {hasTrend && (
-              <ChartSection title="SALES TREND" {...sectionBase}>
+              <ChartSection title="Sales trend" {...sectionBase}>
                 <BarChart
                   data={salesTrend}
                   height={190}
@@ -334,7 +413,7 @@ export default function DashboardScreen() {
             )}
 
             {byCategory.length > 0 && (
-              <ChartSection title="BY CATEGORY" {...sectionBase}>
+              <ChartSection title="By category" {...sectionBase}>
                 <DonutChart
                   data={byCategory}
                   size={140}
@@ -347,7 +426,7 @@ export default function DashboardScreen() {
             )}
 
             {topItems.length > 0 && (
-              <ChartSection title="TOP PRODUCTS" {...sectionBase}>
+              <ChartSection title="Top products" {...sectionBase}>
                 <HorizontalBarChart
                   data={topItems.map((it, i) => ({
                     label: it.name,
@@ -366,7 +445,7 @@ export default function DashboardScreen() {
             )}
 
             {byEmployee.length > 0 && (
-              <ChartSection title="BY EMPLOYEE" {...sectionBase}>
+              <ChartSection title="By employee" {...sectionBase}>
                 <HorizontalBarChart
                   data={byEmployee.map(([name, amt]) => ({ label: name, value: amt }))}
                   barColor={colors.success}
@@ -380,16 +459,20 @@ export default function DashboardScreen() {
             )}
 
             {Object.keys(byPayType).length > 0 && (
-              <ChartSection title="PAYMENT TYPES" {...sectionBase}>
+              <ChartSection title="Payment types" {...sectionBase}>
                 {Object.entries(byPayType).map(([type, amt]) => (
                   <PayRow key={type} type={type} amt={amt} currencySymbol={currencySymbol} colors={colors} />
                 ))}
               </ChartSection>
             )}
 
-            <ChartSection title="SUMMARY" {...sectionBase}>
-              <SummaryRow label="Total Discounts" value={formatCurrency(discountTotal, currencySymbol)} color={colors.warning} borderColor={colors.border} muted={colors.mutedForeground} />
-              <SummaryRow label="Tax Collected" value={formatCurrency(taxTotal, currencySymbol)} color={colors.mutedForeground} borderColor={colors.border} muted={colors.mutedForeground} />
+            <ChartSection title="Summary" {...sectionBase}>
+              <SummaryRow label="Total sales (before refunds)" value={formatCurrency(totalSales, currencySymbol)} color={colors.foreground} borderColor={colors.border} muted={colors.mutedForeground} />
+              <SummaryRow label="Refunds issued" value={formatCurrency(totalRefunds, currencySymbol)} color={colors.destructive} borderColor={colors.border} muted={colors.mutedForeground} />
+              <SummaryRow label="Net sales (after refunds)" value={formatCurrency(netSales, currencySymbol)} color={colors.primary} borderColor={colors.border} muted={colors.mutedForeground} />
+              <SummaryRow label="Total discounts" value={formatCurrency(discountTotal, currencySymbol)} color={colors.warning} borderColor={colors.border} muted={colors.mutedForeground} />
+              <SummaryRow label="Tax collected" value={formatCurrency(taxTotal, currencySymbol)} color={colors.mutedForeground} borderColor={colors.border} muted={colors.mutedForeground} />
+              <SummaryRow label="Inventory value" value={formatCurrency(inventoryValue, currencySymbol)} color={colors.foreground} borderColor={colors.border} muted={colors.mutedForeground} />
             </ChartSection>
           </>
         )}
@@ -439,26 +522,27 @@ const st = StyleSheet.create({
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
     paddingHorizontal: 18, paddingVertical: 14, borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  title: { fontSize: 22, fontWeight: "800" },
-  subtitle: { fontSize: 12, marginTop: 2 },
+  title: { fontSize: 22, fontFamily: fonts.bold },
+  subtitle: { fontSize: 13, fontFamily: fonts.regular, marginTop: 3 },
   posBtn: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 14, paddingVertical: 9, borderRadius: 10 },
-  posBtnText: { color: "#fff", fontWeight: "700", fontSize: 13 },
+  posBtnText: { color: "#fff", fontFamily: fonts.semibold, fontSize: 13 },
   rangeBar: {
     flexDirection: "row", paddingHorizontal: 12, paddingVertical: 8,
     gap: 4, borderBottomWidth: StyleSheet.hairlineWidth,
   },
   rangeBtn: { flex: 1, alignItems: "center", paddingVertical: 7, borderRadius: 8 },
-  rangeTxt: { fontSize: 12, fontWeight: "700" },
+  rangeTxt: { fontSize: 13, fontFamily: fonts.medium },
   kpiGrid: { flexDirection: "row", flexWrap: "wrap", padding: 12, gap: 10 },
-  kpiGridWide: { flexWrap: "nowrap" },
-  kpiCard: { flex: 1, minWidth: "45%", padding: 14, borderRadius: 14, borderWidth: 1 },
-  kpiCardWide: { minWidth: 0 },
-  kpiIcon: { width: 26, height: 26, borderRadius: 8, alignItems: "center", justifyContent: "center" },
-  kpiLabel: { fontSize: 11, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5 },
-  kpiVal: { fontSize: 22, fontWeight: "800", marginTop: 2 },
+  kpiGridWide: { flexWrap: "wrap" },
+  kpiCard: { flex: 1, minWidth: "45%", padding: 14, borderRadius: 12, borderWidth: 1 },
+  kpiCardWide: { minWidth: "30%" },
+  kpiIcon: { width: 28, height: 28, borderRadius: 8, alignItems: "center", justifyContent: "center" },
+  kpiLabel: { fontSize: 12, fontFamily: fonts.medium },
+  kpiVal: { fontSize: 20, fontFamily: fonts.bold, marginTop: 2 },
+  kpiSub: { fontSize: 11, fontFamily: fonts.regular, marginTop: 4 },
   section: { marginHorizontal: 14, marginBottom: 14 },
-  sectionTitle: { fontSize: 11, fontWeight: "700", letterSpacing: 1, marginBottom: 8 },
-  card: { borderRadius: 14, borderWidth: 1, padding: 14 },
+  sectionTitle: { fontSize: 13, fontFamily: fonts.semibold, marginBottom: 8 },
+  card: { borderRadius: 12, borderWidth: 1, padding: 14 },
   wideRow: { flexDirection: "row", alignItems: "flex-start" },
   wideCol: { flex: 1 },
   payRow: {
@@ -466,9 +550,9 @@ const st = StyleSheet.create({
     paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth,
   },
   payIcon: { width: 30, height: 30, borderRadius: 8, alignItems: "center", justifyContent: "center" },
-  payLabel: { fontSize: 13 },
-  payVal: { fontSize: 14, fontWeight: "700" },
+  payLabel: { fontSize: 13, fontFamily: fonts.regular },
+  payVal: { fontSize: 14, fontFamily: fonts.semibold },
   empty: { alignItems: "center", padding: 48, gap: 10 },
-  emptyTitle: { fontSize: 18, fontWeight: "700", marginTop: 8 },
-  emptyMsg: { fontSize: 13, textAlign: "center", lineHeight: 20 },
+  emptyTitle: { fontSize: 18, fontFamily: fonts.semibold, marginTop: 8 },
+  emptyMsg: { fontSize: 13, fontFamily: fonts.regular, textAlign: "center", lineHeight: 20 },
 });

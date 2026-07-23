@@ -1,6 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   KeyboardAvoidingView, Modal, Platform, ScrollView,
   StyleSheet, Text, TextInput, TouchableOpacity, View,
@@ -19,6 +19,10 @@ export default function ClockInScreen() {
   const [openingCash, setOpeningCash] = useState("");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [logoutConfirm, setLogoutConfirm] = useState(false);
+
+  useEffect(() => {
+    if (!currentUser) router.replace("/");
+  }, [currentUser]);
 
   function handleClockIn() {
     const amount = parseFloat(openingCash);
