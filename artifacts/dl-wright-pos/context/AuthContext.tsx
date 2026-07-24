@@ -136,7 +136,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const updated = [newUser];
     setUsers(updated);
     await saveData("users", updated);
-    await saveEmptyBusinessData(saveData);
+     
+    // Create a fresh store with unique ID for this registration
+    await saveEmptyBusinessData(saveData, generateId());
 
     const serverUrl = getServerUrl();
     if (serverUrl && await checkServerHealth(serverUrl)) {

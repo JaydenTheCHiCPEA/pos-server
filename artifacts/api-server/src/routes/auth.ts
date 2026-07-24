@@ -84,17 +84,30 @@ async function saveUsers(users: StoredUser[]): Promise<void> {
 }
 
 async function writeFreshBusiness(newUser: StoredUser): Promise<void> {
-  await db.delete(storageTable);
+  try {
+    const existingUsers = await loadUsers();
+    
+    // Only allow the first registration to set up fresh business data
+    if (existingUsers.length > 0) {
+      throw new Error("Business data already exists");
+    }
+    
+    // Only delete storage if this is truly the first registration
+    await db.delete(storageTable);
 
-  const payload = { ...EMPTY_SEED_PAYLOAD, users: [newUser] };
-  for (const [key, value] of Object.entries(payload)) {
-    await db
-      .insert(storageTable)
-      .values({ key, value, updatedAt: new Date() })
-      .onConflictDoUpdate({
-        target: storageTable.key,
-        set: { value, updatedAt: new Date() },
-      });
+    const payload = { ...EMPTY_SEED_PAYLOAD, users: [newUser] };
+    for (const [key, value] of Object.entries(payload)) {
+      await db
+        .insert(storageTable)
+        .values({ key, value, updatedAt: new Date() })
+        .onConflictDoUpdate({
+          target: storageTable.key,
+          set: { value, updatedAt: new Date() },
+        });
+    }
+  } catch (err) {
+    logger.error({ err }, "writeFreshBusiness failed — preserving existing data");
+    throw err;
   }
 }
 

@@ -1,5 +1,6 @@
 import type { Category, DiscountRule, Item, Store, TaxRate, Transaction, User } from "@/types";
 import type { Shift } from "@/types";
+import { generateId } from "@/utils/format";
 
 export const EMPTY_USERS: User[] = [];
 export const EMPTY_ITEMS: Item[] = [];
@@ -19,13 +20,28 @@ export const EMPTY_STORE: Store = {
   receiptFooter: "",
 };
 
+// Create a fresh store with unique ID for each new registration
+export function createFreshStore(): Store {
+  return {
+    id: generateId(),
+    name: "",
+    address: "",
+    phone: "",
+    email: "",
+    taxId: "",
+    receiptFooter: "",
+  };
+}
+
 export const DEFAULT_THEME_OPTION = "dark";
 export const DEFAULT_CURRENCY_SYMBOL = "$";
 
 /** Persist blank business data to AsyncStorage (excluding users — set separately). */
 export async function saveEmptyBusinessData(
   save: (key: string, value: unknown) => Promise<void>,
+  storeId?: string,
 ): Promise<void> {
+  const store = storeId ? { ...EMPTY_STORE, id: storeId } : createFreshStore();
   await Promise.all([
     save("items", EMPTY_ITEMS),
     save("categories", EMPTY_CATEGORIES),
@@ -33,7 +49,7 @@ export async function saveEmptyBusinessData(
     save("discount_rules", EMPTY_DISCOUNT_RULES),
     save("transactions", EMPTY_TRANSACTIONS),
     save("shifts", EMPTY_SHIFTS),
-    save("store", EMPTY_STORE),
+    save("store", store),
     save("theme_option", DEFAULT_THEME_OPTION),
     save("currency_symbol", DEFAULT_CURRENCY_SYMBOL),
   ]);

@@ -62,12 +62,40 @@ export default function POSScreen() {
     setConfirmDlg({ title, msg, onOk });
   }
 
-  /* ── cart state ── */
+  /* ── cart state with undo history ── */
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [cartHistory, setCartHistory] = useState<CartItem[][]>([]);
   const [search, setSearch] = useState("");
   const [selectedCat, setSelectedCat] = useState<string | null>(null);
   const [overallDiscountType, setOverallDiscountType] = useState<"percent" | "amount">("percent");
   const [overallDiscountVal, setOverallDiscountVal] = useState(0);
+
+  // Max history size (20 undo states)
+  const MAX_HISTORY = 20;
+   
+  function setCartWithHistory(newCart: CartItem[] | ((prev: CartItem[]) => CartItem[])) {
+    setCart(prev => {
+      const updated = typeof newCart === "function" ? newCart(prev) : newCart;
+      setCartHistory(h => {
+        const newHistory = [...h, prev];
+        return newHistory.length > MAX_HISTORY ? newHistory.slice(-MAX_HISTORY) : newHistory;
+      });
+      return updated;
+    });
+  }
+
+  function undoCart() {
+    setCartHistory(prev => {
+      if (prev.length === 0) {
+        showToast("Nothing to undo", false);
+        return prev;
+      }
+      const lastState = prev[prev.length - 1];
+      setCart(lastState);
+      return prev.slice(0, -1);
+    });
+    showToast("Undo successful");
+  }
 
   /* ── modal visibility ── */
   const [cartVisible, setCartVisible] = useState(false);
@@ -107,7 +135,7 @@ export default function POSScreen() {
   function addToCart(item: Item) {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     const taxRate = taxRates.find(t => t.id === item.taxRateId)?.rate ?? getDefaultTax()?.rate ?? 0;
-    setCart(prev => {
+    setCartWithHistory(prev => {
       const existing = prev.find(ci => ci.itemId === item.id);
       if (existing) return prev.map(ci => ci.itemId === item.id ? { ...ci, quantity: ci.quantity + 1 } : ci);
       return [...prev, { itemId: item.id, name: item.name, price: item.price, quantity: 1, discountAmount: 0, taxRate }];
@@ -116,15 +144,15 @@ export default function POSScreen() {
 
   function updateQty(itemId: string, qty: number) {
     if (qty <= 0) { removeFromCart(itemId); return; }
-    setCart(prev => prev.map(ci => ci.itemId === itemId ? { ...ci, quantity: qty } : ci));
+    setCartWithHistory(prev => prev.map(ci => ci.itemId === itemId ? { ...ci, quantity: qty } : ci));
   }
 
   function removeFromCart(itemId: string) {
-    setCart(prev => prev.filter(ci => ci.itemId !== itemId));
+    setCartWithHistory(prev => prev.filter(ci => ci.itemId !== itemId));
   }
 
   function clearCart() {
-    showConfirm("Clear Cart", "Remove all items from the cart?", () => setCart([]));
+    showConfirm("Clear Cart", "Remove all items from the cart?", () => setCartWithHistory([]));
   }
 
   /* ── discounts ── */
@@ -187,6 +215,7 @@ export default function POSScreen() {
     showToast(`Sale complete! ${receipt}${changeStr}`);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     setCart([]);
+    setCartHistory([]);
     setOverallDiscountVal(0);
     setPayVisible(false);
     setCartVisible(false);
@@ -330,6 +359,11 @@ export default function POSScreen() {
             {`Cart (${cartCount} items)`}
           </Text>
           <View style={{ flexDirection: "row", gap: 8 }}>
+            {cartHistory.length > 0 ? (
+              <TouchableOpacity style={[wS.iconBtn, { backgroundColor: colors.surface, borderColor: colors.border }]} onPress={undoCart}>
+                <Feather name="rotate-ccw" size={15} color={colors.primary} />
+              </TouchableOpacity>
+            ) : null}
             <TouchableOpacity style={[wS.iconBtn, { backgroundColor: colors.surface, borderColor: colors.border }]} onPress={() => setDiscountVisible(true)}>
               <Feather name="tag" size={15} color={overallDiscountVal > 0 ? colors.success : colors.mutedForeground} />
             </TouchableOpacity>
@@ -518,6 +552,7 @@ export default function POSScreen() {
           <View style={[s.modalHdr, { borderBottomColor: colors.border, paddingTop: insets.top + 16 }]}>
             <Text style={[s.modalTitle, { color: colors.foreground }]}>{`Cart (${cartCount})`}</Text>
             <View style={{ flexDirection: "row", gap: 12, alignItems: "center" }}>
+              {cartHistory.length > 0 ? <TouchableOpacity onPress={undoCart}><Feather name="rotate-ccw" size={18} color={colors.primary} /></TouchableOpacity> : null}
               {cartCount > 0 ? <TouchableOpacity onPress={clearCart}><Text style={{ color: colors.destructive, fontWeight: "700", fontSize: 14 }}>Clear</Text></TouchableOpacity> : null}
               <TouchableOpacity onPress={() => setCartVisible(false)}><Feather name="x" size={22} color={colors.foreground} /></TouchableOpacity>
             </View>
