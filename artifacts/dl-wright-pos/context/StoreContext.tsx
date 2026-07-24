@@ -139,13 +139,15 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     try {
       await AsyncStorage.multiRemove(ALL_STORAGE_KEYS);
     } catch {}
-    await saveEmptyBusinessData(saveData);
+    // Preserve the current store ID when wiping
+    await saveEmptyBusinessData(saveData, store.id);
     setItems(EMPTY_ITEMS);
     setCategories(EMPTY_CATEGORIES);
     setTaxRates(EMPTY_TAX_RATES);
     setTransactions([]);
     setDiscountRules(EMPTY_DISCOUNT_RULES);
-    setStore(EMPTY_STORE);
+    // Keep the same store ID
+    setStore({ ...store, name: "", address: "", phone: "", email: "", taxId: "", receiptFooter: "" });
   }
 
   return (

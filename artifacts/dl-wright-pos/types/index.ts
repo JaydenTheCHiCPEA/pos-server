@@ -16,6 +16,13 @@ export interface Permissions {
   manageEmployees: boolean;
   viewReports: boolean;
   manageSettings: boolean;
+  manageItemsFromPOS: boolean;
+}
+
+export interface DeviceInfo {
+  id: string;
+  name: string;
+  lastLoginAt: string;
 }
 
 export interface User {
@@ -28,6 +35,7 @@ export interface User {
   hourlyRate: number;
   permissions: Permissions;
   active: boolean;
+  devices?: DeviceInfo[];
 }
 
 export interface Category {
