@@ -256,7 +256,7 @@ export default function POSScreen() {
     const inCartItem = cart.find(ci => ci.itemId === item.id);
     const catColor = getCategoryColor(item.categoryId);
     const isLow = item.stock <= item.minStock;
-    const canManageItems = hasPermission("manageItems");
+    const canManageItems = hasPermission("manageItemsFromPOS");
 
     return (
       <View style={[iCS.card, { backgroundColor: colors.itemCard, borderColor: inCartItem ? colors.primary : colors.border }]}>

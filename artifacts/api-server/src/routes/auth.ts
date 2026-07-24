@@ -40,6 +40,7 @@ const ADMIN_PERMISSIONS: Record<string, boolean> = {
   manageEmployees: true,
   viewReports: true,
   manageSettings: true,
+  manageItemsFromPOS: true,
 };
 
 const MANAGER_PERMISSIONS: Record<string, boolean> = {
@@ -64,6 +65,7 @@ const CASHIER_PERMISSIONS: Record<string, boolean> = {
   manageEmployees: false,
   viewReports: false,
   manageSettings: false,
+  manageItemsFromPOS: false,
 };
 
 async function loadUsers(): Promise<StoredUser[]> {

@@ -16,6 +16,7 @@ export interface Permissions {
   manageEmployees: boolean;
   viewReports: boolean;
   manageSettings: boolean;
+  manageItemsFromPOS: boolean;
 }
 
 export interface DeviceInfo {

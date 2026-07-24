@@ -11,21 +11,21 @@ const ADMIN_PERMISSIONS: Permissions = {
   changeTaxes: true, manageOpenTickets: true, voidSavedItems: true,
   openCashDrawer: true, viewCosts: true, viewReceipts: true, performRefunds: true,
   accessBackOffice: true, manageItems: true, manageEmployees: true,
-  viewReports: true, manageSettings: true,
+  viewReports: true, manageSettings: true, manageItemsFromPOS: true,
 };
 const MANAGER_PERMISSIONS: Permissions = {
   acceptPayments: true, applyDiscounts: true, applyRestrictedDiscounts: true,
   changeTaxes: true, manageOpenTickets: true, voidSavedItems: true,
   openCashDrawer: true, viewCosts: true, viewReceipts: true, performRefunds: true,
   accessBackOffice: true, manageItems: true, manageEmployees: false,
-  viewReports: true, manageSettings: false,
+  viewReports: true, manageSettings: false, manageItemsFromPOS: true,
 };
 const CASHIER_PERMISSIONS: Permissions = {
   acceptPayments: true, applyDiscounts: true, applyRestrictedDiscounts: false,
   changeTaxes: false, manageOpenTickets: false, voidSavedItems: false,
   openCashDrawer: true, viewCosts: false, viewReceipts: true, performRefunds: false,
   accessBackOffice: false, manageItems: false, manageEmployees: false,
-  viewReports: false, manageSettings: false,
+  viewReports: false, manageSettings: false, manageItemsFromPOS: false,
 };
 
 export function getDefaultPermissions(role: UserRole): Permissions {
