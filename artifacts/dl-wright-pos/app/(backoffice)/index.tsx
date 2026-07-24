@@ -6,7 +6,8 @@ import {
   TouchableOpacity, View, useWindowDimensions,
 } from "react-native";
 
-import { BarChart, DonutChart, HorizontalBarChart, LineChart } from "@/components/SimpleChart";
+import { DonutChart, HorizontalBarChart } from "@/components/SimpleChart";
+import { EnhancedBarChart, EnhancedLineChart, AnalyticsCard, TimeRangeSelector } from "@/components/GiftedCharts";
 import { useStore } from "@/context/StoreContext";
 import { useTheme } from "@/context/ThemeContext";
 import { useColors } from "@/hooks/useColors";
@@ -32,12 +33,9 @@ interface SectionProps {
 }
 function ChartSection({ title, children, cardBg, cardBorder, titleColor }: SectionProps) {
   return (
-    <View style={st.section}>
-      <Text style={[st.sectionTitle, { color: titleColor }]}>{title}</Text>
-      <View style={[st.card, { backgroundColor: cardBg, borderColor: cardBorder }]}>
-        {children}
-      </View>
-    </View>
+    <AnalyticsCard title={title} backgroundColor={cardBg} borderColor={cardBorder} titleColor={titleColor}>
+      {children}
+    </AnalyticsCard>
   );
 }
 
@@ -223,21 +221,15 @@ export default function DashboardScreen() {
       </View>
 
       {/* ── Range filter ── */}
-      <View style={[st.rangeBar, { backgroundColor: colors.header, borderBottomColor: colors.border }]}>
-        {ranges.map(r => (
-          <TouchableOpacity
-            key={r.key}
-            style={[
-              st.rangeBtn,
-              { backgroundColor: range === r.key ? colors.primary : "transparent" },
-            ]}
-            onPress={() => setRange(r.key)}
-          >
-            <Text style={[st.rangeTxt, { color: range === r.key ? "#fff" : colors.mutedForeground }]}>
-              {r.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
+      <View style={[st.rangeBar, { backgroundColor: colors.header, borderBottomColor: colors.border, paddingHorizontal: 16, paddingVertical: 12 }]}>
+        <TimeRangeSelector
+          ranges={ranges}
+          selected={range}
+          onSelect={(r: string) => setRange(r as Range)}
+          backgroundColor={colors.header}
+          selectedColor={colors.primary}
+          mutedColor={colors.mutedForeground}
+        />
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -289,26 +281,29 @@ export default function DashboardScreen() {
           <>
             {range === "today" && hourlySales.some(d => d.value > 0) && (
               <ChartSection title="Sales by hour" {...sectionBase}>
-                <BarChart
+                <EnhancedBarChart
                   data={hourlySales}
                   height={160}
                   barColor={colors.primary}
                   labelColor={colors.mutedForeground}
                   gridColor={colors.border}
-                  formatValue={v => v > 0 ? formatCurrency(v, currencySymbol) : ""}
+                  animationDuration={800}
+                  enablePan={true}
                 />
               </ChartSection>
             )}
 
             {hasTrend && (
               <ChartSection title="Sales trend" {...sectionBase}>
-                <LineChart
+                <EnhancedLineChart
                   data={salesTrend}
                   height={200}
                   lineColor={colors.primary}
                   labelColor={colors.mutedForeground}
                   gridColor={colors.border}
-                  formatValue={v => formatCurrency(v, currencySymbol)}
+                  animationDuration={1000}
+                  enablePan={true}
+                  curved={true}
                 />
               </ChartSection>
             )}
@@ -388,26 +383,28 @@ export default function DashboardScreen() {
           <>
             {range === "today" && hourlySales.some(d => d.value > 0) && (
               <ChartSection title="Sales by hour" {...sectionBase}>
-                <BarChart
+                <EnhancedBarChart
                   data={hourlySales}
                   height={160}
                   barColor={colors.primary}
                   labelColor={colors.mutedForeground}
                   gridColor={colors.border}
-                  formatValue={v => v > 0 ? formatCurrency(v, currencySymbol) : ""}
+                  animationDuration={800}
+                  enablePan={true}
                 />
               </ChartSection>
             )}
 
             {hasTrend && (
               <ChartSection title="Sales trend" {...sectionBase}>
-                <BarChart
+                <EnhancedBarChart
                   data={salesTrend}
                   height={190}
                   barColor={colors.primary}
                   labelColor={colors.mutedForeground}
                   gridColor={colors.border}
-                  formatValue={v => v > 0 ? formatCurrency(v, currencySymbol) : ""}
+                  animationDuration={800}
+                  enablePan={true}
                 />
               </ChartSection>
             )}

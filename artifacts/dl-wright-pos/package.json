@@ -56,6 +56,7 @@
     "zod-validation-error": "^3.4.0"
   },
   "dependencies": {
-    "eas": "^0.1.0"
+    "eas": "^0.1.0",
+    "react-native-gifted-charts": "^1.4.77"
   }
 }
