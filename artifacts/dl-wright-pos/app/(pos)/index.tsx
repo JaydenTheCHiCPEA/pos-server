@@ -23,7 +23,7 @@ export default function POSScreen() {
   const { width } = useWindowDimensions();
   const { currentUser, hasPermission, logout } = useAuth();
   const { currentShift, clockOut, addCashMovement, recordSale, getExpectedCash } = useShift();
-  const { items, categories, taxRates, transactions, discountRules, store, addTransaction, reduceStock, getLowStockItems, getDefaultTax } = useStore();
+  const { items, categories, taxRates, transactions, discountRules, store, addTransaction, reduceStock, getLowStockItems, getDefaultTax, updateItem } = useStore();
   const { currencySymbol } = useTheme();
   const { isOnline, pendingSync, isSyncing } = useSync();
 
@@ -256,18 +256,16 @@ export default function POSScreen() {
     const inCartItem = cart.find(ci => ci.itemId === item.id);
     const catColor = getCategoryColor(item.categoryId);
     const isLow = item.stock <= item.minStock;
+    const canManageItems = hasPermission("manageItems");
+
     return (
-      <TouchableOpacity
-        style={[iCS.card, { backgroundColor: colors.itemCard, borderColor: inCartItem ? colors.primary : colors.border }]}
-        onPress={() => addToCart(item)}
-        activeOpacity={0.75}
-      >
-        {/* Image / color bar area */}
-        <View style={{ position: "relative" }}>
+      <View style={[iCS.card, { backgroundColor: colors.itemCard, borderColor: inCartItem ? colors.primary : colors.border }]}>
+        {/* Image / color bar area - square aspect */}
+        <View style={{ position: "relative", aspectRatio: 1, overflow: "hidden", marginBottom: 8 }}>
           {item.imageUri ? (
-            <Image source={{ uri: item.imageUri }} style={iCS.itemImg} resizeMode="cover" />
+            <Image source={{ uri: item.imageUri }} style={{ flex: 1 }} resizeMode="cover" />
           ) : (
-            <View style={[iCS.colorBar, { backgroundColor: catColor }]} />
+            <View style={[{ flex: 1, backgroundColor: catColor }]} />
           )}
           {/* Stock count badge */}
           <View style={[iCS.stockBadge, { backgroundColor: isLow ? colors.destructive : colors.primary }]}>
@@ -280,11 +278,42 @@ export default function POSScreen() {
             </View>
           ) : null}
         </View>
-        <View style={iCS.body}>
+        <View style={[iCS.body, { flex: 1 }]}>
           <Text style={[iCS.name, { color: colors.foreground }]} numberOfLines={2}>{item.name}</Text>
-          <Text style={[iCS.price, { color: colors.primary }]}>{formatCurrency(item.price, currencySymbol)}</Text>
+          <Text style={[iCS.price, { color: colors.primary, marginBottom: 8 }]}>{formatCurrency(item.price, currencySymbol)}</Text>
+           
+          {/* Action buttons */}
+          <View style={{ flexDirection: "row", gap: 6 }}>
+            <TouchableOpacity
+              style={[{ flex: 1, padding: 6, backgroundColor: colors.primary, borderRadius: 4, alignItems: "center", justifyContent: "center" }]}
+              onPress={() => addToCart(item)}
+              activeOpacity={0.8}
+            >
+              <Text style={{ color: "#fff", fontSize: 12, fontWeight: "700" }}>Add</Text>
+            </TouchableOpacity>
+             
+            {canManageItems ? (
+              <View style={{ flexDirection: "row", gap: 4 }}>
+                <TouchableOpacity
+                  style={[{ width: 32, height: 32, backgroundColor: colors.destructive + "33", borderRadius: 4, alignItems: "center", justifyContent: "center", borderColor: colors.destructive + "66", borderWidth: 1 }]}
+                  onPress={() => item.stock > 0 && updateItem(item.id, { stock: item.stock - 1 })}
+                  activeOpacity={0.7}
+                >
+                  <Feather name="minus" size={14} color={colors.destructive} />
+                </TouchableOpacity>
+                 
+                <TouchableOpacity
+                  style={[{ width: 32, height: 32, backgroundColor: colors.success + "33", borderRadius: 4, alignItems: "center", justifyContent: "center", borderColor: colors.success + "66", borderWidth: 1 }]}
+                  onPress={() => updateItem(item.id, { stock: item.stock + 1 })}
+                  activeOpacity={0.7}
+                >
+                  <Feather name="plus" size={14} color={colors.success} />
+                </TouchableOpacity>
+              </View>
+            ) : null}
+          </View>
         </View>
-      </TouchableOpacity>
+      </View>
     );
   }
 

@@ -18,6 +18,12 @@ export interface Permissions {
   manageSettings: boolean;
 }
 
+export interface DeviceInfo {
+  id: string;
+  name: string;
+  lastLoginAt: string;
+}
+
 export interface User {
   id: string;
   username: string;
@@ -28,6 +34,7 @@ export interface User {
   hourlyRate: number;
   permissions: Permissions;
   active: boolean;
+  devices?: DeviceInfo[];
 }
 
 export interface Category {
