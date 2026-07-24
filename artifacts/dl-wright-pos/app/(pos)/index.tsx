@@ -458,6 +458,12 @@ export default function POSScreen() {
               <Feather name="rotate-ccw" size={15} color={colors.mutedForeground} />
             </TouchableOpacity>
           ) : null}
+          {hasPermission("manageItemsFromPOS") ? (
+            <TouchableOpacity style={[s.hBtn, { backgroundColor: colors.surface, borderColor: colors.border }]} onPress={() => router.push("/(pos)/inventory")}>
+              <Text style={{ color: colors.mutedForeground, fontSize: 12, fontWeight: "700", paddingRight: 6 }}>Inventory</Text>
+              <Feather name="box" size={15} color={colors.mutedForeground} />
+            </TouchableOpacity>
+          ) : null}
           {hasPermission("accessBackOffice") ? (
             <TouchableOpacity style={[s.hBtn, { backgroundColor: colors.surface, borderColor: colors.border }]} onPress={() => router.push("/(backoffice)")}>
               <Text style={{ color: colors.mutedForeground, fontSize: 12, fontWeight: "700", paddingRight: 6 }}>Back Office</Text>
