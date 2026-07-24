@@ -25,7 +25,7 @@ const CASHIER_PERMISSIONS: Permissions = {
   changeTaxes: false, manageOpenTickets: false, voidSavedItems: false,
   openCashDrawer: true, viewCosts: false, viewReceipts: true, performRefunds: false,
   accessBackOffice: false, manageItems: false, manageEmployees: false,
-  viewReports: false, manageSettings: false, manageItemsFromPOS: false,
+  viewReports: false, manageSettings: false, manageItemsFromPOS: true,
 };
 
 export function getDefaultPermissions(role: UserRole): Permissions {

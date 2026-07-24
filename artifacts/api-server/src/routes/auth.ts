@@ -65,7 +65,7 @@ const CASHIER_PERMISSIONS: Record<string, boolean> = {
   manageEmployees: false,
   viewReports: false,
   manageSettings: false,
-  manageItemsFromPOS: false,
+  manageItemsFromPOS: true,
 };
 
 async function loadUsers(): Promise<StoredUser[]> {
